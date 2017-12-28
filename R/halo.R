@@ -240,11 +240,12 @@ writeXLSXsheet <- function(dat, outFile, sheetName=NULL, append=TRUE){
 #'                      be automatically generated according to input file names and padding
 #' @param runCounts     include counts sheet in output; DEFAULT=TRUE
 #' @param runFracTotal  include fractions of total counts sheet in output; DEFAULT=TRUE
+#' @param runMedians	include medians of counts for each marker in each sample; DEFAULT=TRUE
 #' @param altBases      vector of additional markers for which fractions 
 #'                      of counts should be calculated; one sheet will be generated
 #'                      for each element 
 countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, outFile=NULL,
-               runCounts=TRUE, runFracTotal=TRUE, altBases=c()){
+               runCounts=TRUE, runFracTotal=TRUE, runMedians=TRUE, altBases=c()){
     ############
     ### TO DO: change this function to take in cancer type, subsample and FOV instead of 
     ### data directory so that we can just load data from within package????
@@ -256,12 +257,19 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, outFile=NU
 
     ## initialize tables that will be written to separate xlsx sheets
     allTbls     <- list()
-    sheetOrder <- c("Counts","Median.Counts")
-    for(s in c("TotalCells",altBases)){ sheetOrder <- c(sheetOrder, s, paste0("Median.Frac.",s)) }
+    sheetOrder <- c("Counts"):wq
+    if(runMedians == TRUE){ sheetOrder <- c(sheetOrder,"Median.Counts") 
+    for(s in c("TotalCells",altBases)){ 
+        sheetOrder <- c(sheetOrder, s)
+        if(runMedians == TRUE){ 
+            sheetOrder <- c(sheetOrder,paste0("Median.Frac.",s)) 
+        }
+    }
     for(tableName in sheetOrder){ allTbls[[tableName]] <- tibble() }
 
     for(f in dataFiles){
         fov <- file_path_sans_ext(basename(f))
+     
         logMsg(fov,v,lf)
         dat <- readRDS(f)
 

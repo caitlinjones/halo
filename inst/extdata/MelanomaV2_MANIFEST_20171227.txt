@@ -16,13 +16,17 @@
 #
 #######
 markers /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma	# REQUIRED
-dataDir /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma/markers/markerMelanoma_v1.txt   # may be NULL, in which case the files will be determined by cancer type and optional FOV
+data_dir /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma/markers/markerMelanoma_v1.txt   # may be NULL, in which case the files will be determined by cancer type and optional FOV
 cancer	melanoma	# optional; if no dataDir is given, cancer will be used to find which file(s) to load
 sample	CR	# optional; if no dataDir is given, sample(s) will be used to find which file(s) to load
 pad	30	# this is in pixels and will be converted to um
-FOV	NULL	# we want ALL FOV
-EXCLUDE_FOV	NULL
-EXCLUDE_MARKER	NULL
+fov	NULL	# we want ALL FOV
+exclude_fov	NULL
+exclude_marker	NULL
 log	test.log
 verbose	TRUE
-altBases	CD3,DAPI
+alt_bases	CD3,DAPI
+out_file	NULL
+run_counts	TRUE
+run_frac_total	TRUE
+run_medians	TRUE
