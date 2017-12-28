@@ -1,0 +1,19 @@
+Package: halo
+Title: Analyze and visualize Halo data
+Version: 0.0.0.9000
+Authors@R: c(person("Nicholas", "Socci", email = "socci@cbio.mskcc.org", role = c("aut")),
+             person("Caitlin", "Jones", email = "byrne@cbio.mskcc.org", role = c("aut","cre"))
+            )
+Description: Analyze and visualize Halo data (TO DO: UPDATE).
+Depends: R (>= 3.2.0),
+    tidyverse,
+    magrittr,
+    rJava,
+    xlsxjars,
+    xlsx,
+    digest,
+    tools,
+    kimisc    
+License: GPL-3
+Encoding: UTF-8
+LazyData: true

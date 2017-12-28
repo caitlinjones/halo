@@ -1,0 +1,28 @@
+# MelanomaV2 
+# 2017-12-27
+# Example manifest file
+#
+# This manifest will be used as input to our script and will also
+# be kept for our records
+#
+# Immediately below a comment section (no header) will be tab-delimited rows of key/value
+# pairs to be read by script and put into a list
+#
+# A third, optional column may contain notes but MUST be an 
+# actual third column (i.e., there must be a tab after the 
+# second column)
+#
+# Values that are vectors (e.g., altBases) should be delimited by commas
+#
+#######
+markers /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma	# REQUIRED
+dataDir /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma/markers/markerMelanoma_v1.txt   # may be NULL, in which case the files will be determined by cancer type and optional FOV
+cancer	melanoma	# optional; if no dataDir is given, cancer will be used to find which file(s) to load
+sample	CR	# optional; if no dataDir is given, sample(s) will be used to find which file(s) to load
+pad	30	# this is in pixels and will be converted to um
+FOV	NULL	# we want ALL FOV
+EXCLUDE_FOV	NULL
+EXCLUDE_MARKER	NULL
+log	test.log
+verbose	TRUE
+altBases	CD3,DAPI
