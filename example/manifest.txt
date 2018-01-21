@@ -1,0 +1,70 @@
+# example manifest 
+# 
+#
+#######
+#######
+## directory with *.rda files of ObjectAnalysisData; required for counting
+data_dir	/home/byrne/halo/data/melanoma/allMarkers/rda
+
+## file of markers to count; each line is ONE marker combination, with 
+## individual markers divided by commas
+markers	/home/byrne/halo/data/melanoma/allMarkers/markers/melanoma_all_markers.txt
+
+## log file; if NULL, name will be automatically generated
+log	test_pie_random_colors_20180121.log
+
+## amount to trim from outer boundary of image
+pad	30	# this is in pixels and will be converted to um
+
+## comma-separated list of markers to use as baselines for counting
+alt_bases	NULL
+
+## print log messages to both stdout and to log
+verbose	TRUE
+
+## comma-separated list of FOV to exclude for ALL samples and ALL markers
+exclude_fov	NULL
+
+## comma-separated list of markers to exclude from ALL samples
+exclude_marker	NULL
+
+## comma-separated list of samples to exclude from ALL markers
+exclude_sample	NULL
+
+## run counts on all *.rda files in data_dir
+run_counts	FALSE
+
+## run fraction of TOTAL counts (Maryam said this will never be needed
+## but I left it here just in case)
+run_frac_total	FALSE	
+
+## generate medians of marker counts for each sample
+run_medians	FALSE
+
+## generate pie charts of all markers for each sample
+pie_charts	TRUE
+
+## when generating pie charts, calculate percentages of markers that are POSITIVE for
+## each of these single cell-type markers
+cell_type_markers	CD3, CD4, CD8, FOXP3, CD20, CD56, CD68, CD163, CD14, MRC1, TGM2, SOX10
+
+## specify name of counts XLSX file
+counts_xlsx_file	NULL
+
+## specify name of counts *.rda file
+counts_rda_file	/home/byrne/halo/data/melanoma/allMarkers/ALL_MARKER_COMBINATIONS.rda	
+
+## name of pie charts pdf file
+pdf_pie_charts_by_sample	test_pie_20180121.pdf
+
+## exclude single FOV(s) for particular sample(s); value is a string in the form
+## [sampleName]:1+4+9,[sampleName2]:3,[sampleName5]:2+5
+exclude_sample_fov	Untreated:2,PR:2+6+7+8+9+10+15+25+31+32+33+34,CR:11+23+24+25+26
+
+## when making pie charts, combine counts of markers with percentages below
+## this number
+other_threshold	0.02
+
+## when set to TRUE, colors used will be those pre-defined by Maryam; otherwise,
+## they will be random
+custom_colors	FALSE
