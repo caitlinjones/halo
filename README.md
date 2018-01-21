@@ -8,7 +8,7 @@ On MSK server, with R
 Run
 ```{r eval=FALSE}
 library(devtools)
-install_github("halo")
+install_github("caitlinjones/halo")
 ```
 ### Step 2: Create manifest with all project parameters
 Example [here](example/manifest.txt) 
