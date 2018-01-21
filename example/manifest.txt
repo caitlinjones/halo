@@ -8,7 +8,7 @@ data_dir	/home/byrne/halo/data/melanoma/allMarkers/rda
 
 ## file of markers to count; each line is ONE marker combination, with 
 ## individual markers divided by commas
-markers	/home/byrne/halo/data/melanoma/allMarkers/markers/melanoma_all_markers.txt
+markers	example/CD3+MarkerCombos.txt
 
 ## log file; if NULL, name will be automatically generated
 log	test_pie_random_colors_20180121.log

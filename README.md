@@ -11,7 +11,7 @@ library(devtools)
 install_github("halo")
 ```
 ### Step 2: Create manifest with all project parameters
-Example [here]example/manifest.txt 
+Example [here](example/manifest.txt) 
 
 ### Step 3: Run pipeline 
 To generate counts and/or plots of Object Analysis data from Halo, run 
