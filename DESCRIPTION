@@ -13,7 +13,10 @@ Depends: R (>= 3.2.0),
     xlsx,
     digest,
     tools,
-    kimisc    
+    kimisc,
+    scales,
+    RColorBrewer    
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 6.0.1

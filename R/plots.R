@@ -21,6 +21,78 @@ remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
     return(dat)
 }
 
+#' Get marker colors
+#'
+#' Get a named vector of predefined colors for certain markers
+#'
+#' @param markerColors  named vector of colors already in use, where names are 
+#'                      marker names (e.g., CD3, CD4, MRC1, etc.) and values are
+#'                      colors; only to be used when 'custom' is set to FALSE; default=NULL
+#' @param markerCombos  vector of marker combinations to add to MarkerColors; only to be
+#'                      used when 'custom' is set to FALSE
+#' @param custom        logical, default=FALSE; use custom colors previously 
+#'                      defined as: 
+#'                        CD3,CD4,CD8,FOXP3,CD56: blues
+#'                        CD68, CD14,CD163,MRC1,TGM2: reds
+#'                        SOX10: yellow
+#'                        CD20: green
+#'                        other combinations: white 
+#' @export
+get_marker_colors <- function(markerColors=NULL,markerCombos=NULL,custom=FALSE){
+    #CD3, CD4, CD8, FOXP3, AND/OR CD56 = different shades of blue
+    #CD20 = green
+    #SOX10 = yellow
+    #CD68, CD14, CD163, MRC1, AND/OR TGM2 = different shades of red
+    #any other combination of these markers = different shades of grey
+    #any combination less than 2%/"other" = white
+
+    if(custom){
+        if(is.null(markerColors) || length(markerColors) == 0){
+            bls <- brewer.pal(5, "Blues")
+            names(bls) <- c("CD3","CD4","CD8","FOXP3","CD56")
+
+            rds <- brewer.pal(5, "Reds")
+            names(rds) <- c("CD68","CD14","CD163","MRC1","TGM2")
+
+            wht <- c("white")
+            names(wht) <- c("Other")
+
+            ylw <- c("yellow")
+            names(ylw) <- c("SOX10")
+
+            grn <- c("green")
+            names(grn) <- c("CD20")
+
+            markerColors <- c(bls,rds,wht,ylw,grn)
+        } else {
+            if(length(markerCombos) > 0){
+                extraColors <- gray.colors(length(markerCombos))
+                names(extraColors) <- markerCombos
+                markerColors <- c(markerColors,extraColors)
+            }
+        }
+    } else {
+        qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual' | brewer.pal.info$category == 'div',]
+        col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+        col_vector <- col_vector[-which(col_vector == "#FFFF99")] ## remove ugly yellow
+
+        if(is.null(markerColors) || length(markerColors) == 0){
+            markerColors <- col_vector[1:length(markerCombos)]
+            names(markerColors) <- markerCombos
+        } else {
+            newCombos <- setdiff(markerCombos,names(markerColors))
+            numExtras = length(setdiff(markerCombos,names(markerColors)))
+            if(numExtras > 0){
+                first = length(markerColors)+1
+                last = length(markerColors)+numExtras
+                extraColors <- col_vector[first:last]
+                names(extraColors) <- newCombos
+                markerColors <- c(markerColors,extraColors)
+            }
+        }
+    }
+    return(markerColors)
+}
 
 #' Make a grid of pie charts, one for each given marker showing
 #' the percentages of all the marker combinations in which that 
@@ -31,6 +103,7 @@ remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
 #' @param   type                type of chart ["bar"|"pie"]; default="bar"
 #' @param   other_threshold     all markers making up less that this percentage will be put togther in 
 #'                              a marker combination named 'other'; default=0.05
+#' @param   custom_colors       use color scheme defined in get_marker_colors(); TO DO: CHANGE THIS
 #' @param   exclude_sample_fov  a string of Sample FOVs to exclude from analysis in the form: 
 #'                                  'Sample1:2+4+3,Sample2:1,Sample3:2+4' 
 #' @param   pdfFile             output PDF file
@@ -42,13 +115,13 @@ remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
 #' @export
 plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_threshold=0.05, 
                                     exclude_sample_fov=NULL, pdfFile=NULL, v=TRUE, logFile=NULL, 
-                                    debug=FALSE){
+                                    debug=FALSE,custom_colors=FALSE){
 
     ## set up colors
-    qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual',]
-    col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
-    col_vector <- col_vector[-which(col_vector == "#FFFF99")] ## remove ugly yellow
     markerColors <- c()
+    if(custom_colors){
+        markerColors <- get_marker_colors(custom=custom_colors)
+    }
 
     if(!is.null(pdfFile)){
         pdf(pdfFile,width=10,height=7)#paper="a4r")
@@ -106,7 +179,6 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
 
             ## add data for this sample to the rest
             pieTbl <- bind_rows(pieTbl, all)
-
         }
 
         pie_data <- gather(pieTbl, names(pieTbl)[-1], key="Combo", value="Count") %>%
@@ -116,29 +188,19 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
         ## remove negative markers from the combos for clarity 
         pie_data$Combo <- gsub(",[A-Z]{1,}\\d*-","",pie_data$Combo)
 
-        uniqCombos <- unique(pie_data$Combo)
-        if(length(markerColors) == 0){
-            markerColors <- col_vector[1:length(uniqCombos)]
-            names(markerColors) <- uniqCombos
-        } else {
-            newCombos <- setdiff(uniqCombos,names(markerColors))
-            numExtras = length(setdiff(uniqCombos,names(markerColors)))
-            if(numExtras > 0){
-                first = length(markerColors)+1
-                last = length(markerColors)+numExtras
-                extraColors <- col_vector[first:last]
-                names(extraColors) <- newCombos
-                markerColors <- c(markerColors,extraColors)
-            }   
-        }
+        ## get colors for this sample to match any previous samples
+        markerColors <- get_marker_colors(markerColors=markerColors,markerCombos=unique(pie_data$Combo),
+                                          custom=custom_colors)
+        sampleColors <- markerColors[unique(pie_data$Combo)] 
 
+        ## plot data
         numRows <- NULL
         if(type == "bar"){ numRows <- 1 }
         p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
                facet_wrap(~Marker,nrow = numRows) +
                geom_bar(width=1,stat="identity",position="fill") +
        labs(x = "", y = "", title = paste0(samp,"\n")) +
-               scale_fill_manual(values = markerColors) + 
+               scale_fill_manual(values = sampleColors) + 
                theme(axis.text.x = element_blank(), 
                      legend.text = element_text(size=8), 
                      legend.key.size = unit(0.5,"cm"),legend.position="bottom") +

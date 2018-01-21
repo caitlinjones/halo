@@ -15,10 +15,10 @@
 # Values that are vectors (e.g., altBases) should be delimited by commas
 #
 #######
-markers /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma	# REQUIRED
-data_dir /home/byrne/halo/Rpkg/halo/inst/extdata/melanoma/markers/markerMelanoma_v1.txt   # may be NULL, in which case the files will be determined by cancer type and optional FOV
+data_dir	/home/byrne/halo/Rpkg/halo/inst/extdata/melanoma	# REQUIRED
+markers	/home/byrne/halo/Rpkg/halo/inst/extdata/melanoma/markers/markerMelanoma_v1.txt	# may be NULL, in which case the files will be determined by cancer type and optional FOV
 cancer	melanoma	# optional; if no dataDir is given, cancer will be used to find which file(s) to load
-sample	CR	# optional; if no dataDir is given, sample(s) will be used to find which file(s) to load
+sample	NULL	# optional; if no dataDir is given, sample(s) will be used to find which file(s) to load
 pad	30	# this is in pixels and will be converted to um
 fov	NULL	# we want ALL FOV
 exclude_fov	NULL

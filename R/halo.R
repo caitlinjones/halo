@@ -1,58 +1,3 @@
-#' Log message to file and screen if specified
-#' 
-#' Print date() and log message to file, and if
-#' verbose is set to TRUE, also print to screen
-#' 
-#' @param msg        message to be printed
-#' @param v          verbose - when set to TRUE (default), messages
-#'                   will be printed to screen as well as to file
-#' @param logFile    file to write log messages to; DEFAULT=NULL
-#' @export
-logMsg <- function(msg, v=TRUE, logFile=NULL){
-    ## write log message to file, and if verbose, print
-    ## to stdout
-    if(v){
-        write(paste("[INFO]",date(),msg,sep="\t"),stdout())
-    }
-    if(!is.null(logFile)){
-        write(msg, logFile, append=TRUE)
-    }
-}
-
-#' Build list of project parameters and values by reading
-#' project manifest
-#' 
-#' Given a tab-delimited file of key-value pairs, read
-#' them into list. File may contain comments both on top and in columns
-#' beyond the second, but will be ignored here
-#'
-#' TO DO: Add to description list of required and optional keys in file
-#' 
-#' @param    file    manifest file to be read
-#' @return   a list of all project parameters
-#' @export
-projectParams <- function(file){
-    pp <- list(markers=NULL,
-               dataDir=NULL,
-               cancer=NULL, 
-               sample=NULL, 
-               pad=NULL,
-               FOV=NULL,
-               log=NULL,
-               verbose=TRUE,
-               altBases=c())
-
-    man <- read.delim(file, comment.char="#", header=FALSE)[,c(1,2)]
-    for(x in nrow(man)){
-        if("," %in% man[x,2]){
-            pp[[man[x,1]]] <- trimws(unlist(strsplit(man[x,2])))
-        } else {
-            pp[[man[x,1]]] <- man[x,2]
-        }
-    }
-    return(pp)
-}
-
 #' Load data from *.rda file
 #'
 #' Load data for one subsample from one cancer type, and optionally
@@ -90,11 +35,101 @@ split_by_fov <- function(dat,outDir){
     }
 }
 
-#' Compare list of unique markers in a data set with the list
-#' of markers in a marker file
+#' Remove from data markers that are not in marker file
 #' 
-#' Print a warning with a list of any markers that are in m1 but
-#' NOT in m2
+#' Remove from data markers that are not in marker file
+#' 
+#' @param dat       tibble containing marker data
+#' @param m2        list of individual markers in marker file
+#' @param v         verbose - when set to TRUE, messages
+#'                  will be printed to screen as well as to file;
+#'                  DEFAULT = TRUE
+#' @param logFile   file to write log messages to; DEFAULT=NULL
+#' @return  a tibble with extra markers filtered out
+#' @export
+removeExtraMarkers <- function(dat, m2, v=FALSE, logFile=NULL){
+    datMarkers <- unique(dat$MarkerName)
+    if(length(setdiff(datMarkers,m2)) > 0){
+        msg <- paste0("    WARNING: Removing markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
+        if(!is.null(logFile)){
+            logMsg(msg,v=FALSE,logFile)
+        } else {
+            warning("Removing arkers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
+        }
+        ## remove markers in data but not in marker file
+        finalMarkers <- datMarkers[which(datMarkers %in% m2)]
+        dat <- filter(dat, MarkerName %in% finalMarkers)
+    }
+    return(dat)    
+}
+
+#' Add missing markers
+#' 
+#' Add to data markers that are in marker file but are missing
+#' from given data set
+#'
+#' @param dat       tibble containing marker data
+#' @param m2        list of individual markers in marker file
+#' @param v         verbose - when set to TRUE, messages
+#'                  will be printed to screen as well as to file;
+#'                  DEFAULT = TRUE
+#' @param logFile   file to write log messages to; DEFAULT=NULL
+#' @param debug     print debug messages; DEFAULT=FALSE
+#' @return  a tibble with missing markers added, with "Positive" value
+#'          set to NA
+addMissingMarkers <- function(dat, m2, v=FALSE, logFile=NULL, debug=FALSE){
+    datMarkers <- unique(dat$MarkerName)
+    if(length(setdiff(m2, datMarkers)) > 0){
+        msg <- paste0("    WARNING: Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
+        if(!is.null(logFile)){
+            logMsg(msg,v=FALSE,logFile)
+        } else {
+            warning("Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
+        }
+        ## add markers in marker file but not data
+        ## if there is no pos or neg marker, set Value = NA; 
+        ## otherwise, set to zero
+        for(m in setdiff(m2, datMarkers)){
+            tmp <- distinct(dat, UUID, Sample, FOV, SLICE)
+            tmp$MarkerName <- m
+            if(length(grep("-",m))==0){
+                if(paste0(m,"-") %in% datMarkers){
+                    if(debug){
+                        logMsg(paste0(m," is negative for ALL cells in ALL FOV. Setting counts to zero."),v,logFile)
+                    }
+                    tmp$Value <- 0
+                } else{
+                    if(debug){
+                        logMsg(paste0(m," is MISSING from data. Setting counts to NA."),v,logFile)
+                    }
+                    tmp$Value <- NA
+                }
+            } else {
+                if(gsub("-","",m) %in% datMarkers){
+                    if(debug){
+                        logMsg(paste0(m," is negative for ALL cells in ALL FOV. Setting counts to zero."),v,logFile)
+                    }
+                    tmp$Value <- 0
+                } else{
+                    if(debug){
+                        logMsg(paste0(m," is MISSING from data. Setting counts to NA."),v,logFile)
+                    }
+                    tmp$Value <- NA
+                }
+            }
+            dat <- bind_rows(dat, tmp)
+        }
+    }
+    return(dat)
+}
+
+
+#' Modify data to sync to markers in marker file
+#' 
+#' Filter out any markers in data that are not in marker file; Add to data
+#' markers in marker file but not  
+#' Print a warning with a list of any markers that are in data but not
+#' marker file OR that are in marker file but not data
 #'
 #' @param dat       tibble containing marker data
 #' @param m2        list of individual markers in marker file
@@ -105,25 +140,37 @@ split_by_fov <- function(dat,outDir){
 #' @return  a tibble with extra markers filtered out
 #' @export
 validateMarkers <- function(dat,m2,v=FALSE,logFile=NULL){
-    datMarkers <- unique(dat$MarkerName)
-    finalMarkers <- intersect(datMarkers, m2)
+    finalMarkers <- c()
+    datMarkers <- unique(dat$Marker)
+
     if(length(setdiff(datMarkers,m2)) > 0){
-        msg <- paste0("WARNING: Markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
+        msg <- paste0("    WARNING: Markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
         if(!is.null(logFile)){
             logMsg(msg,v=FALSE,logFile)
         } else {
             warning("Markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
         }
+        ## remove markers in data but not in marker file
+        dat <- filter(dat, Marker %in% finalMarkers)
     }
+
     if(length(setdiff(m2, datMarkers)) > 0){
-        msg <- paste0("WARNING: Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
+        msg <- paste0("    WARNING: Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
         if(!is.null(logFile)){
             logMsg(msg,v=FALSE,logFile)
         } else {
             warning("Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
         }
+        ## add markers in marker file but not data, set Value to NA
+        for(m in setdiff(m2, datMarkers)){
+            tmp <- distinct(dat, UUID, Sample, FOV, SLICE)
+            tmp$MarkerName <- m
+            tmp$Value <- NA
+            dat <- bind_rows(dat, tmp)
+        }
+        finalMarkers <- c(datMarkers, setdiff(m2, datMarkers))
     }
-    return(filter(dat, MarkerName %in% finalMarkers))
+    return(dat)
 }
 
 #' Make sure list of unique FOVs contains only one element
@@ -180,6 +227,7 @@ trimImage <- function(dat, pad=0){
 #' @param dataFiles     vector of data file(s)
 #' @param pad           amount that will be trimmed from FOV
 #' @return  file name to be used for saving counts
+#' @export
 markerStatsFile <- function(markerFile,dataFiles,pad){
     if(length(dataFiles)==1) {
         outFile <- paste("markerTable",
@@ -215,6 +263,98 @@ writeXLSXsheet <- function(dat, outFile, sheetName=NULL, append=TRUE){
     write.xlsx(as.data.frame(dat), outFile, row.names=F, sheetName = sheetName, append = append)
 }
 
+#' Clean marker file
+#' 
+#' Remove spaces, new lines, tabs from file
+#' 
+#' @param markerFile   File condatining list of marker names
+#' @param altBases     a vector of alternate markers that will be considered the baseline
+#'                     for all other counts
+#' @return  a vector of markers
+cleanMarkers <- function(markerFile,altBases){
+    markers <- scan(markerFile, "", sep="\n")
+    markers <- gsub("[[:space:]]", "", markers)
+    for(ab in altBases){
+        if(ab != "DAPI"){
+            m <- paste0(ab,",DAPI")
+            if(! m %in% markers){ 
+                markers <- c(markers,m)
+            }
+        }
+    }
+    return(markers)
+}
+
+#' Clean data table
+#' 
+#' Alter column names, ensure correct data types for certain columns
+#' 
+#' @param  dat    tibble containing marker data
+#' @param  debug  print extra messages for debugging
+#' @param  v      verbose - when set to TRUE, messages
+#'                will be printed to screen as well as to file;
+#'                DEFAULT = TRUE
+#' @param lf      log file
+#' @return   modified tibble
+cleanData <- function(dat,v=TRUE,lf=NULL,debug=FALSE){
+    if(debug){ logMsg("changing SPOT to FOV and SubSample to Sample",v,lf,"DEBUG") }
+    dat <- rename(dat, FOV = SPOT)
+    dat$FOV <- as.integer(dat$FOV)
+    dat$SLICE <- as.integer(dat$SLICE)
+    dat$Sample <- gsub("_ObjectAnalysisData","",dat$SubSample)
+    return(dat)
+}
+
+#' Create median row
+#' 
+#' Given a tibble with the first three columns Sample, FOV, SLICE, 
+#' caclulate medians of all remaining columns and return row to be added to tibble
+#' 
+#' @param  dat    table of counts where first three columns are Sample, 
+#'                  FOV, SLICE, and the remaining columns are marker counts or fractions
+#' @param  samp   sample name
+#' @return   a row where Sample is the unique sample in input table, FOV and SLICE are NA,
+#'           and the remaining values are medians of each column
+medianRow <- function(dat,samp){
+    meds <- as.list(apply(dat[,4:ncol(dat)],2,median))
+    medRow <- list(Sample=samp, FOV=NA, SLICE=NA)   
+    medRow <- c(medRow, meds)
+    return(as.tibble(medRow))
+}
+
+#' Get order of workbook sheets for final excel file
+#' 
+#' Order sheets according to whether fractions and/or medians are to be run
+#' 
+#' @param  runCounts     include raw counts in final output; DEFAULT=TRUE
+#' @param  runMedians    include a sheet of medians for each counts and fraction sheet; 
+#'                       DEFAULT=TRUE
+#' @param  runFracTotal  include a sheet of fractions of total cells; DEFAULT=FALSE
+#' @param  altBases      include a sheet of fractions of cells positive for each of these 
+#'                       markers; DEFAULT=NULL
+#' @param  debug         print debug messages; DEFAULT=FALSE
+getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, altBases=NULL, 
+                   debug=FALSE){
+    sheetOrder <- c("Counts")
+    if(runMedians){ sheetOrder <- c(sheetOrder, "Median.Counts") }
+    if(runFracTotal == TRUE){ sheetOrder <- c(sheetOrder, "Frac.TotalCounts") }
+    if(!is.null(altBases) & altBases != "NULL"){
+        for(s in altBases){
+            ## only count cells if DAPI is positive also 
+            ## create mock marker "ab,DAPI"
+            s = paste0("Frac.",s)
+            if(s == "Frac.DAPI"){
+                sheetOrder <- c(sheetOrder, s)
+            } else {
+                sheetOrder <- c(sheetOrder, paste(s,"DAPI",sep=","))
+            }
+            if(runMedians){
+                sheetOrder <- c(sheetOrder,paste0("Median.",s))
+            }
+        }
+    }
+    return(sheetOrder)
+}
 
 #' Generate a XLSX file of counts for all markers in a given file
 #' 
@@ -225,141 +365,171 @@ writeXLSXsheet <- function(dat, outFile, sheetName=NULL, append=TRUE){
 #' 
 #' By default, the file will contain at minimum a sheet of counts and a sheet
 #' containing fractions of total counts. In all sheets, a column represents a marker 
-#' and a row represents a single FOV from a single sample. If a vector of markers
-#' is provided (e.g., c("DAPI","CD3")), another sheet will be created for each of
-#' them containing the fraction of cells using those markers as "bases" 
+#' and a row represents a single FOV from a single sample. 
 #'
-#' @param markerFile    File containing list of marker names
-#' @param dataFiles     vector of data file(s)
-#' @param pad           amount that will be trimmed from FOV
-#' @param v             verbose - when set to TRUE, messages
-#'                      will be printed to screen as well as to file;
-#'                      DEFAULT = TRUE
-#' @param logFile       file to write log messages to; DEFAULT=NULL
-#' @param outFile       name of XLSX file to write to; if NULL, name will
-#'                      be automatically generated according to input file names and padding
-#' @param runCounts     include counts sheet in output; DEFAULT=TRUE
-#' @param runFracTotal  include fractions of total counts sheet in output; DEFAULT=TRUE
-#' @param runMedians	include medians of counts for each marker in each sample; DEFAULT=TRUE
-#' @param altBases      vector of additional markers for which fractions 
-#'                      of counts should be calculated; one sheet will be generated
-#'                      for each element 
-countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, outFile=NULL,
-               runCounts=TRUE, runFracTotal=TRUE, runMedians=TRUE, altBases=c()){
-    ############
-    ### TO DO: change this function to take in cancer type, subsample and FOV instead of 
-    ### data directory so that we can just load data from within package????
-    ###########
+#' If a vector of markers is provided (e.g., c("DAPI","CD3")), another sheet will 
+#' be created for each of them containing the fraction of cells using those markers as 
+#' "bases". IMPORTANT NOTE: Any altBases in addition to DAPI must be counted ONLY IF DAPI
+#' IS POSITIVE AS WELL (e.g., CD3+DAPI+). The names in the output .xlsx file, however
+#' will exclude the DAPI+ to avoid redundancy. 
+#'
+#' @param markerFile       File containing list of marker names
+#' @param dataFiles        vector of data file(s)
+#' @param pad              amount that will be trimmed from FOV
+#' @param v                verbose - when set to TRUE, messages
+#'                         will be printed to screen as well as to file;
+#'                         DEFAULT = TRUE
+#' @param logFile          file to write log messages to; DEFAULT=NULL
+#' @param countsXLSXFile   name of XLSX file to write to; if NULL, name will
+#'                         be automatically generated according to input file names and padding
+#' @param countsRDAFile    name of RDA file to write to; if NULL, RDA file will NOT be written
+#' @param runCounts        include counts sheet in output; DEFAULT=TRUE
+#' @param runFracTotal     include fractions of total counts sheet in output; DEFAULT=FALSE
+#' @param runMedians	   include medians of counts for each marker in each sample; DEFAULT=TRUE
+#' @param altBases         vector of additional markers for which fractions 
+#'                         of counts should be calculated; one sheet will be generated
+#'                         for each element 
+#' @param debug            print debug messages; DEFAULT=FALSE
+#' @export
+countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSXFile=NULL,
+               countsRDAFile=NULL, runCounts=TRUE, runFracTotal=FALSE, runMedians=TRUE, 
+               altBases=c(),debug=FALSE){
 
-    markerNames <- scan(markerFile,"")
-    dataFiles   <- file.path(dataDir,dir(dataDir)[grep("\\.rda$",dir(dataDir))])
-    outFile     <- markerStatsFile(markerFile,dataFiles,pad)
-
-    ## initialize tables that will be written to separate xlsx sheets
-    allTbls     <- list()
-    sheetOrder <- c("Counts"):wq
-    if(runMedians == TRUE){ sheetOrder <- c(sheetOrder,"Median.Counts") 
-    for(s in c("TotalCells",altBases)){ 
-        sheetOrder <- c(sheetOrder, s)
-        if(runMedians == TRUE){ 
-            sheetOrder <- c(sheetOrder,paste0("Median.Frac.",s)) 
-        }
+    if(debug){ logMsg("Reading marker file",v,lf,"DEBUG") }
+    markerNames <- cleanMarkers(markerFile,altBases)
+    dataFiles <- file.path(dataDir,dir(dataDir)[grep("\\.rda$",dir(dataDir))])
+    if(is.null(countsXLSXFile) || countsXLSXFile == "NULL"){ 
+        ## ^^ when using manifest, null is passed as a string. this is a quick temp hack 
+        countsXLSXFile <- markerStatsFile(markerFile,dataFiles,pad) 
     }
+    logMsg(paste0("Generating counts file: ",countsXLSXFile),v,lf) 
+    if(is.null(countsRDAFile) || countsRDAFile == "NULL"){
+        ## ^^ when using manifest, null is passed as a string. this is a quick temp hack 
+        countsRDAFile <- gsub(".rda",".xlsx",countsXLSXFile)
+    }
+
+    ###              
+    ## initialize tables that will be written to separate xlsx sheets
+    ###              
+    if(debug){ logMsg("Initializing tables",v,lf,"DEBUG") }
+    allTbls <- list()
+    sheetOrder <- getSheetOrder(runCounts=runCounts, runFracTotal=runFracTotal, 
+                                runMedians=runMedians, altBases=altBases, debug=debug)
     for(tableName in sheetOrder){ allTbls[[tableName]] <- tibble() }
 
+    ###              
+    ## generate counts for each file and add them to the final tables
+    ###              
     for(f in dataFiles){
-        fov <- file_path_sans_ext(basename(f))
-     
-        logMsg(fov,v,lf)
+
+        ## initialize tables for this one sample
+        sampTbls <- list()
+        for(tableName in sheetOrder){ sampTbls[[tableName]] <- tibble() }
+
+        logMsg(file_path_sans_ext(basename(f)),v,lf)
+        if(debug){ logMsg("Reading rda file",v,lf,"DEBUG") }
         dat <- readRDS(f)
 
-        logMsg(paste0("    Validating file ",f),v,lf)
+        logMsg(paste0("    Trimming ", pad, " pixels from image"),v,lf)
+        dat <- trimImage(dat,as.numeric(pad))
 
-        logMsg(paste0("Trimming ", pad, " pixels from image"),v,lf)
-        dat <- trimImage(dat,pad)
+        dat <- cleanData(dat,v=v,lf=lf,debug=TRUE)
+        samp <- unique(dat$Sample)
+        if(debug){ logMsg(paste0("there is/are ", length(samp), " sample(s) in this file: ", samp),v,lf,"DEBUG") }
 
         ## add new column containing marker names that alone will
         ## indicate whether a cell is positive or negative for that
-        ## marker (e.g., SOXP10 with Value == 0 becomes SOXP10-)
+        ## marker (e.g., SOX10 with Value == 0 becomes SOX10-)
+        if(debug){ logMsg("adding negative marker columns and adjusting pos/neg values",v,lf,"DEBUG") }
         dat <- dat %>%
             filter(ValueType == "Positive") %>%
-            select(UUID,SubSample,SPOT,SLICE,Marker,Value) %>%
+            select(UUID,Sample,FOV,SLICE,Marker,Value) %>%
             mutate(Sign = ifelse(Value == 1, "", "-")) %>%
             unite(MarkerName, Marker, Sign, sep="")
 
-        logMsg(paste0("    Validating markers ",markerFile),v,lf)
-        dat <- validateMarkers(dat, unique(unlist(strsplit(markerNames,","))),v,lf)
-        dat$SPOT <- as.numeric(dat$SPOT)
-
         ## change all values to 1, as any nonsensical relationships
-        ## will be changed to NA and then 0 by spread(), with fill=0 and drop=F.
-        ## ultimately 1 will indicate positive for every marker (including
-        ## negative markers)
-        ## e.g., for every zero in the original data, a marker name with "-"
-        ## and a value of 1 will be in the new data
-        ## 
-        ## create a single column for each Marker (negative and positive) with
-        ## 1 indicating it should be counted and 0 indicating it should NOT be
-        ## counted
-        dat$Value <- 1 
-        dat <- spread(dat, MarkerName, Value,drop=FALSE,fill = 0)
+        ## will be changed to NA and then 0 by spread(); 1 will indicate positive, so if
+        ## a marker with "-" has val 1, the pos marker is negative
+        if(debug){ logMsg("changing all values to 1 and spreading table, leaving NAs for nonsensical relationships",v,lf,"DEBUG") }
+        dat$Value <- 1
 
-        ## Some markers are eliminated completely if they have all zeros. Add them back
-        for(x in setdiff(unlist(strsplit(markerNames,",")),names(dat))){
-            warning(paste0(x, " is NOT in data set!!!!"),immediate.=FALSE)
-            dat[[x]] = 0
+        ## sync markers in marker file and data
+        dat <- removeExtraMarkers(dat, unique(unlist(strsplit(markerNames, ","))), v=v, logFile=lf)
+        dat <- addMissingMarkers(dat, unique(unlist(strsplit(markerNames, ","))), v=v, logFile=lf, debug=debug) 
+
+        ###              
+        ## process counts for each marker
+        ###              
+        for(i in 1:length(markerNames)){
+            x <- markerNames[i]
+            logMsg(paste0("[",i,"] ",x),v,lf,"DEBUG")
+            indivMarkers <- unlist(strsplit(x,","))
+
+            tmp <- filter(dat, MarkerName %in% indivMarkers) %>%
+                   spread(MarkerName, Value, drop = FALSE, fill = 0)
+            tmp[[x]] <- ifelse(rowSums(tmp[,indivMarkers]) == length(indivMarkers),1,0)
+            tmp <- select(tmp, Sample, FOV, SLICE, x) %>%
+                     gather(x, key=MarkerNames, value="tmp") %>%
+                     group_by(Sample, FOV, SLICE, MarkerNames) %>%
+                     summarize(Counts = sum(tmp)) %>%
+                     spread(MarkerNames, Counts)
+            if(length(sampTbls[["Counts"]]) == 0){ 
+                sampTbls[["Counts"]] <- tmp 
+            } else {
+                sampTbls[["Counts"]] <- left_join(sampTbls[["Counts"]], tmp, by=c("Sample","FOV","SLICE")) 
+            }
         }
 
-        logMsg("    Calculating stats",v,lf)
-        for(x in markerNames){
-            tmp <- select(dat, unlist(strsplit(x,",")))
-            dat[[x]] <- ifelse(rowSums(tmp) == ncol(tmp),1,0)
+        ###              
+        ## calculate medians
+        ## add to main table as well as a separate table of only medians
+        ###              
+        medRow <- medianRow(sampTbls[["Counts"]],samp)
+        sampTbls[["Counts"]] <- bind_rows(sampTbls[["Counts"]],medRow) 
+ 
+        if(length(sampTbls[["Median.Counts"]]) == 0){
+            sampTbls[["Median.Counts"]] <- medRow
+        } else {
+            sampTbls[["Median.Counts"]] <- bind_rows(sampTbls[["Median.Counts"]],medRow)        
         }
-        tblRow <- select(dat,SubSample, SPOT, SLICE, markerNames) %>%
-                 gather(markerNames, key=MarkerNames, value="tmp") %>% 
-                 group_by(SubSample, SPOT, SLICE, MarkerNames) %>% 
-                 summarise(Counts = sum(tmp)) %>%
-                 spread(MarkerNames, Counts)
-        allTbls[["Counts"]] <- bind_rows(allTbls[["Counts"]],tblRow)
-
-        fracTotal <- tblRow
-        fracTotal[1,4:ncol(fracTotal)] <- fracTotal[1,4:ncol(fracTotal)]/nrow(dat)        
-
-        allTbls[["TotalCells"]] <- bind_rows(allTbls[["TotalCells"]],fracTotal)
-
+         
+        ###              
+        ## calculate fractions
+        ###              
         for(ab in altBases){
-            tmp <- tblRow
-            tmp[1,4:ncol(tmp)] <- tmp[,4:ncol(tmp)]/as.numeric(tmp[1,ab])
-            allTbls[[ab]] <- bind_rows(allTbls[[ab]],tmp)
-        } 
-    }
+            m <- ifelse(ab == "DAPI", ab, paste0(ab,",DAPI")) 
+            tName <- paste0("Frac.",m)
+            if(debug){ logMsg(paste0("getting fraction of cells based on total ",ab," cells"),v,lf,"DEBUG") }
+            vals <- sampTbls[["Counts"]][[m]]
+            tmp <- sampTbls[["Counts"]]
+            tmp[,4:ncol(tmp)] <- tmp[,4:ncol(tmp)]/as.numeric(vals)
+            sampTbls[[tName]] <- tmp
+            
+            medRow <- medianRow(sampTbls[[tName]],samp)
+            medTbl <- paste0("Median.Frac.",ab)
+            if(length(sampTbls[[medTbl]]) == 0){
+                sampTbls[[medTbl]] <- medRow
+            } else {
+                sampTbls[[medTbl]] <- bind_rows(sampTbls[[medTbl]],medRow)
+            }
+        }
 
-    for(tblName in names(allTbls)){
-        if(length(grep("Median",tblName)) > 0){
-            row <- allTbls[[gsub("Median\\.|Frac\\.","",tblName)]] %>%
-                   gather(markerNames, key=MarkerNames, value="tmp") %>%
-                   group_by(SubSample, MarkerNames) %>%
-                   summarise(Median = median(tmp)) %>%
-                   spread(MarkerNames, Median)
-            row$SPOT <- "NA"
-            row$SLICE <- "NA"
-            allTbls[[tblName]] <- bind_rows(allTbls[[tblName]],row) 
+        ###
+        ## add to final tables
+        ###
+        for(s in sheetOrder){
+            if(length(allTbls[[s]]) > 0){
+                allTbls[[s]] <- bind_rows(allTbls[[s]], sampTbls[[s]])
+            } else {
+                allTbls[[s]] <- sampTbls[[s]]
+            }
+        }
+  
+        if(!is.null(countsRDAFile)){
+            saveRDS(allTbls,countsRDAFile)
         }
     }
 
-    logMsg("Writing output",v,lf)
-    ## write output
-    logMsg(paste0("Writing file ",outFile), v, lf)
-    for(t in sheetOrder){
-        append <- TRUE
-        sheetName <- paste0("Frac.",t)
-        if(t == "Counts"){
-            append <- FALSE
-            sheetName <- t
-        }
-        logMsg(paste0("Writing sheet ",sheetName), v, lf)
-        tbl <- select(allTbls[[t]],SubSample,SPOT,SLICE,markerNames) %>%
-                 arrange(SubSample,SPOT)
-        writeXLSXsheet(tbl, outFile, sheetName = sheetName, append = append) 
-    }
+    return(allTbls) 
+   
 }
