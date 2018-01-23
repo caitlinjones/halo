@@ -65,7 +65,8 @@ if(pp$run_counts){
         stop("The following args need to be set in order to run counts: 'markers' and 'data_dir'")
     }
     allTbls <- countMarkers(pp$markers, pp$data_dir, lf=pp$log, v=pp$verbose, pad=pp$pad,
-                     outFile=pp$out_file, runCounts=pp$run_counts,
+                     countsXLSXFile=pp$counts_xlsx_file,
+               countsRDAFile=pp$counts_rda_file, runCounts=pp$run_counts,
                      runFracTotal=pp$run_frac_total, runMedians=pp$run_medians,
                      altBases=pp$alt_bases,debug=args$debug)
     countsTbl <- allTbls[["Counts"]]

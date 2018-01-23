@@ -4,7 +4,7 @@
 \alias{cleanMarkers}
 \title{Clean marker file}
 \usage{
-cleanMarkers(markerFile, altBases)
+cleanMarkers(markerFile, altBases = NULL)
 }
 \arguments{
 \item{markerFile}{File condatining list of marker names}

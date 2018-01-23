@@ -247,6 +247,7 @@ markerStatsFile <- function(markerFile,dataFiles,pad){
     return(outFile)
 }
 
+
 #' Shortcut to write a XLSX file 
 #' 
 #' Write a XLSX file with the following defaults:
@@ -271,14 +272,16 @@ writeXLSXsheet <- function(dat, outFile, sheetName=NULL, append=TRUE){
 #' @param altBases     a vector of alternate markers that will be considered the baseline
 #'                     for all other counts
 #' @return  a vector of markers
-cleanMarkers <- function(markerFile,altBases){
+cleanMarkers <- function(markerFile,altBases=NULL){
     markers <- scan(markerFile, "", sep="\n")
     markers <- gsub("[[:space:]]", "", markers)
-    for(ab in altBases){
-        if(ab != "DAPI"){
-            m <- paste0(ab,",DAPI")
-            if(! m %in% markers){ 
-                markers <- c(markers,m)
+    if(!is.null(altBases) & length(altBases) > 0){
+        for(ab in altBases){
+            if(ab != "DAPI"){
+                m <- paste0(ab,",DAPI")
+                if(! m %in% markers){ 
+                    markers <- c(markers,m)
+                }
             }
         }
     }
@@ -338,7 +341,7 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
     sheetOrder <- c("Counts")
     if(runMedians){ sheetOrder <- c(sheetOrder, "Median.Counts") }
     if(runFracTotal == TRUE){ sheetOrder <- c(sheetOrder, "Frac.TotalCounts") }
-    if(!is.null(altBases) & altBases != "NULL"){
+    if(!is.null(altBases) & length(altBases) > 0){ 
         for(s in altBases){
             ## only count cells if DAPI is positive also 
             ## create mock marker "ab,DAPI"
@@ -383,6 +386,8 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
 #' @param countsXLSXFile   name of XLSX file to write to; if NULL, name will
 #'                         be automatically generated according to input file names and padding
 #' @param countsRDAFile    name of RDA file to write to; if NULL, RDA file will NOT be written
+#' @param writeXLSX        write counts to XLSX file; DEFAULT=TRUE
+#' @param saveRDSfile      save counts table to RDS file; DEFAULT=TRUE
 #' @param runCounts        include counts sheet in output; DEFAULT=TRUE
 #' @param runFracTotal     include fractions of total counts sheet in output; DEFAULT=FALSE
 #' @param runMedians	   include medians of counts for each marker in each sample; DEFAULT=TRUE
@@ -392,20 +397,21 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
 #' @param debug            print debug messages; DEFAULT=FALSE
 #' @export
 countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSXFile=NULL,
-               countsRDAFile=NULL, runCounts=TRUE, runFracTotal=FALSE, runMedians=TRUE, 
-               altBases=c(),debug=FALSE){
+               countsRDAFile=NULL, writeXLSX=TRUE, saveRDSfile=TRUE, runCounts=TRUE, 
+               runFracTotal=FALSE, runMedians=TRUE, altBases=NULL,debug=FALSE){
 
     if(debug){ logMsg("Reading marker file",v,lf,"DEBUG") }
     markerNames <- cleanMarkers(markerFile,altBases)
     dataFiles <- file.path(dataDir,dir(dataDir)[grep("\\.rda$",dir(dataDir))])
-    if(is.null(countsXLSXFile) || countsXLSXFile == "NULL"){ 
-        ## ^^ when using manifest, null is passed as a string. this is a quick temp hack 
-        countsXLSXFile <- markerStatsFile(markerFile,dataFiles,pad) 
+
+    logMsg(paste0("Generating counts for ", basename(markerFile), " and ", length(dataFiles) ,
+                  " files in ", dataDir),v,lf) 
+
+    if(writeXLSX & is.null(countsXLSXFile)){ 
+        countsXLSXFile <- projectFileName(markerFile,dataFiles,pad,"xlsx") 
     }
-    logMsg(paste0("Generating counts file: ",countsXLSXFile),v,lf) 
-    if(is.null(countsRDAFile) || countsRDAFile == "NULL"){
-        ## ^^ when using manifest, null is passed as a string. this is a quick temp hack 
-        countsRDAFile <- gsub(".rda",".xlsx",countsXLSXFile)
+    if(saveRDSfile & is.null(countsRDAFile)){
+        countsRDAFile <- projectFileName(markerFile,dataFiles,pad,"rda")
     }
 
     ###              
@@ -433,7 +439,7 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
         logMsg(paste0("    Trimming ", pad, " pixels from image"),v,lf)
         dat <- trimImage(dat,as.numeric(pad))
 
-        dat <- cleanData(dat,v=v,lf=lf,debug=TRUE)
+        dat <- cleanData(dat,v=v,lf=lf,debug=debug)
         samp <- unique(dat$Sample)
         if(debug){ logMsg(paste0("there is/are ", length(samp), " sample(s) in this file: ", samp),v,lf,"DEBUG") }
 
@@ -459,10 +465,12 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
 
         ###              
         ## process counts for each marker
-        ###              
+        ###
+        logMsg("    Processing counts for each marker",v,lf)              
         for(i in 1:length(markerNames)){
             x <- markerNames[i]
-            logMsg(paste0("[",i,"] ",x),v,lf,"DEBUG")
+            #if(debug){ logMsg(paste0("[",i,"] ",x),v,lf,"DEBUG") }
+            logMsg(paste0("      [",i,"] ",x),v,lf)
             indivMarkers <- unlist(strsplit(x,","))
 
             tmp <- filter(dat, MarkerName %in% indivMarkers) %>%
@@ -495,22 +503,24 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
          
         ###              
         ## calculate fractions
-        ###              
-        for(ab in altBases){
-            m <- ifelse(ab == "DAPI", ab, paste0(ab,",DAPI")) 
-            tName <- paste0("Frac.",m)
-            if(debug){ logMsg(paste0("getting fraction of cells based on total ",ab," cells"),v,lf,"DEBUG") }
-            vals <- sampTbls[["Counts"]][[m]]
-            tmp <- sampTbls[["Counts"]]
-            tmp[,4:ncol(tmp)] <- tmp[,4:ncol(tmp)]/as.numeric(vals)
-            sampTbls[[tName]] <- tmp
+        ###       
+        if(!is.null(altBases) & length(altBases) > 0){       
+            for(ab in altBases){
+                m <- ifelse(ab == "DAPI", ab, paste0(ab,",DAPI")) 
+                tName <- paste0("Frac.",m)
+                if(debug){ logMsg(paste0("getting fraction of cells based on total ",ab," cells"),v,lf,"DEBUG") }
+                vals <- sampTbls[["Counts"]][[m]]
+                tmp <- sampTbls[["Counts"]]
+                tmp[,4:ncol(tmp)] <- tmp[,4:ncol(tmp)]/as.numeric(vals)
+                sampTbls[[tName]] <- tmp
             
-            medRow <- medianRow(sampTbls[[tName]],samp)
-            medTbl <- paste0("Median.Frac.",ab)
-            if(length(sampTbls[[medTbl]]) == 0){
-                sampTbls[[medTbl]] <- medRow
-            } else {
-                sampTbls[[medTbl]] <- bind_rows(sampTbls[[medTbl]],medRow)
+                medRow <- medianRow(sampTbls[[tName]],samp)
+                medTbl <- paste0("Median.Frac.",ab)
+                if(length(sampTbls[[medTbl]]) == 0){
+                    sampTbls[[medTbl]] <- medRow
+                } else {
+                    sampTbls[[medTbl]] <- bind_rows(sampTbls[[medTbl]],medRow)
+                }
             }
         }
 
@@ -525,11 +535,24 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
             }
         }
   
-        if(!is.null(countsRDAFile)){
+        if(saveRDSfile){
+            if(is.null(countsRDAFile)){
+                countsRDAFile <- projectFileName(markerFile,dataFiles,pad,"rda")
+            }
             saveRDS(allTbls,countsRDAFile)
         }
     }
-
+    
+    if(writeXLSX){
+        if(is.null(countsXLSXFile)){
+            countsXLSXFile <- projectFileName(markerFile,dataFiles,pad,"xlsx")
+        }
+        for(s in 1:length(sheetOrder)){
+            append <- ifelse(s == 1,FALSE,TRUE)
+            writeXLSXsheet(as.data.frame(allTbls[[sheetOrder[s]]]), countsXLSXFile, 
+                           sheetName=sheetOrder[s], append=TRUE) 
+        }
+    } 
     return(allTbls) 
    
 }

@@ -1,24 +1,33 @@
-#' Remove from counts tibble any FOV to be excluded
+#' Get marker colors
 #'
-#' Filter data to exclude specific FOV for specific samples
-#' 
-#' @param dat         counts tibble from countMarkers()
-#' @param exclusions  a string of exlusions in the form: Sample1:3+5+9,Sample2:1+16+22
-#' @param v           verbose - when set to TRUE, messages
-#'                              will be printed to screen as well as to file;
-#'                              DEFAULT = TRUE
-#' @param debug       print debug messages; default=FALSE
+#' Get a named vector of predefined colors for certain markers
+#'
+#' @param markerColors  named vector of colors already in use, where names are 
+#'                      marker names (e.g., CD3, CD4, MRC1, etc.) and values are
+#'                      colors; only to be used when 'custom' is set to FALSE; default=NULL
+#' @param markerCombos  vector of marker combinations to add to MarkerColors; only to be
+#'                      used when 'custom' is set to FALSE
 #' @export
-remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
-    exclude_sample_fov <- trimws(unlist(strsplit(exclusions,",")))
-    for(ex in exclude_sample_fov){
-        samp <- unlist(strsplit(ex,":"))[1]
-        fovEx <- unlist(strsplit(ex,":"))[2]
-        fovEx <- unlist(strsplit(fovEx,"\\+"))
-        if(debug){ logMsg(paste0("Removing ",samp," FOV ",fovEx)) }
-        dat <- filter(dat, !(Sample == samp & FOV %in% fovEx))
+get_marker_colors <- function(markerColors=NULL,markerCombos=NULL){
+    qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual' | brewer.pal.info$category == 'div',]
+    col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+    col_vector <- col_vector[-which(col_vector == "#FFFF99")] ## remove ugly yellow
+
+    if(is.null(markerColors) || length(markerColors) == 0){
+        markerColors <- col_vector[1:length(markerCombos)]
+        names(markerColors) <- markerCombos
+    } else {
+        newCombos <- setdiff(markerCombos,names(markerColors))
+        numExtras = length(setdiff(markerCombos,names(markerColors)))
+        if(numExtras > 0){
+            first = length(markerColors)+1
+            last = length(markerColors)+numExtras
+            extraColors <- col_vector[first:last]
+            names(extraColors) <- newCombos
+            markerColors <- c(markerColors,extraColors)
+        }
     }
-    return(dat)
+    return(markerColors)
 }
 
 #' Get marker colors
@@ -30,15 +39,8 @@ remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
 #'                      colors; only to be used when 'custom' is set to FALSE; default=NULL
 #' @param markerCombos  vector of marker combinations to add to MarkerColors; only to be
 #'                      used when 'custom' is set to FALSE
-#' @param custom        logical, default=FALSE; use custom colors previously 
-#'                      defined as: 
-#'                        CD3,CD4,CD8,FOXP3,CD56: blues
-#'                        CD68, CD14,CD163,MRC1,TGM2: reds
-#'                        SOX10: yellow
-#'                        CD20: green
-#'                        other combinations: white 
 #' @export
-get_marker_colors <- function(markerColors=NULL,markerCombos=NULL,custom=FALSE){
+get_custom_colors <- function(markerColors=NULL,markerCombos=NULL){
     #CD3, CD4, CD8, FOXP3, AND/OR CD56 = different shades of blue
     #CD20 = green
     #SOX10 = yellow
@@ -46,53 +48,49 @@ get_marker_colors <- function(markerColors=NULL,markerCombos=NULL,custom=FALSE){
     #any other combination of these markers = different shades of grey
     #any combination less than 2%/"other" = white
 
-    if(custom){
-        if(is.null(markerColors) || length(markerColors) == 0){
-            bls <- brewer.pal(5, "Blues")
-            names(bls) <- c("CD3","CD4","CD8","FOXP3","CD56")
+    bls <- colorRampPalette(c("lightblue", "darkblue"))(length(grep("CD3|CD4|CD8|FOXP3|CD56",markerCombos))*3)
+    bls <- setdiff(bls,markerColors)
+    reds <- colorRampPalette(c("red", "darkred"))(length(grep("CD68|CD14|CD163|MRC1|TGM2",markerCombos))*3)
+    reds <- setdiff(reds,markerColors)
+    grays <- colorRampPalette(c("white","black"))(256)   
+    grays <- setdiff(grays,markerColors)
 
-            rds <- brewer.pal(5, "Reds")
-            names(rds) <- c("CD68","CD14","CD163","MRC1","TGM2")
-
-            wht <- c("white")
-            names(wht) <- c("Other")
-
-            ylw <- c("yellow")
-            names(ylw) <- c("SOX10")
-
-            grn <- c("green")
-            names(grn) <- c("CD20")
-
-            markerColors <- c(bls,rds,wht,ylw,grn)
+    for(m in markerCombos){
+        mlst <- unlist(strsplit(m,","))
+        if(all(mlst %in% c("CD3","CD4","CD8","FOXP3","CD56"))){
+            n <- sample(1:length(bls),1)
+            markerColors <- c(markerColors, bls[n])
+            bls <- bls[-n]
+        } else if(all(mlst %in% c("CD68","CD14","CD163","MRC1","TGM2"))){
+            n <- sample(1:length(reds),1)
+            markerColors <- c(markerColors, reds[n])
+            reds <- reds[-n]
+        } else if(m == "SOX10"){
+            markerColors <- c(markerColors,"#ffff80")
+        } else if(m == "CD20"){
+            markerColors <- c(markerColors,"#28b463")
         } else {
-            if(length(markerCombos) > 0){
-                extraColors <- gray.colors(length(markerCombos))
-                names(extraColors) <- markerCombos
-                markerColors <- c(markerColors,extraColors)
-            }
+            n <- sample(1:length(grays),1)
+            markerColors <- c(markerColors, grays[n])
+            grays <- grays[-n]
         }
-    } else {
-        qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual' | brewer.pal.info$category == 'div',]
-        col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
-        col_vector <- col_vector[-which(col_vector == "#FFFF99")] ## remove ugly yellow
-
-        if(is.null(markerColors) || length(markerColors) == 0){
-            markerColors <- col_vector[1:length(markerCombos)]
-            names(markerColors) <- markerCombos
-        } else {
-            newCombos <- setdiff(markerCombos,names(markerColors))
-            numExtras = length(setdiff(markerCombos,names(markerColors)))
-            if(numExtras > 0){
-                first = length(markerColors)+1
-                last = length(markerColors)+numExtras
-                extraColors <- col_vector[first:last]
-                names(extraColors) <- newCombos
-                markerColors <- c(markerColors,extraColors)
-            }
-        }
+        names(markerColors)[length(markerColors)] <- m
     }
+
     return(markerColors)
 }
+
+#' Extract a legend from a gplot
+#' 
+#' Extract a legend from a plot generated with ggplot
+#' 
+#' @param plt  a plot generated with ggplot 
+g_legend <- function(plt){ 
+    tmp <- ggplot_gtable(ggplot_build(a.gplot)) 
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
+    legend <- tmp$grobs[[leg]] 
+    return(legend)
+} 
 
 #' Make a grid of pie charts, one for each given marker showing
 #' the percentages of all the marker combinations in which that 
@@ -119,12 +117,9 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
 
     ## set up colors
     markerColors <- c()
-    if(custom_colors){
-        markerColors <- get_marker_colors(custom=custom_colors)
-    }
 
     if(!is.null(pdfFile)){
-        pdf(pdfFile,width=10,height=7)#paper="a4r")
+        pdf(pdfFile,width=10,height=8)#paper="a4r")
     }
 
     ## remove median rows from counts table
@@ -139,20 +134,20 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
         if(debug){ logMsg(samp,v,logFile,"DEBUG") }
 
         pieTbl <- tibble()
-
         for(m in markerNames){
             if(debug){ logMsg(m,v,logFile,"DEBUG") }
             if(length(grep(m,names(countsTable))) == 0){
-                #print(paste0("skipping ",m))
                 if(debug){ logMsg(paste0("skipping ",m),v,logFile,"DEBUG") }
                 next
             }
 
             tmp <- countsTable
-
             ## remove marker combos in counts table that do not have this POSITIVE marker
             posMarkerCombos <- names(tmp)[!grepl(paste0(m,"-"),names(tmp))]
-
+            if(length(posMarkerCombos) == 3){
+                logMsg(paste0("No ",m,"+ cells. Skipping."),v,logFile)
+                next
+            }
             ## get total marker counts and percentage of each marker for this sample
             tmp <- select(tmp, posMarkerCombos) %>%
                  filter(Sample == samp) %>%
@@ -160,23 +155,24 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
                  group_by(Marker) %>%
                  summarise(TotalMarkerCount = sum(Count)) %>%
                  mutate(PercentAllSampleCells = TotalMarkerCount/sum(TotalMarkerCount))
-
+ 
             ## collapse markers that each make up less than X% of all counts
             other <- filter(tmp, PercentAllSampleCells <= other_threshold) %>%
                        summarise(TotalMarkerCount = sum(TotalMarkerCount),
                                  PercentAllSampleCells = sum(PercentAllSampleCells))
             other$Marker <- "Other"
-
             ## separate markers that make up more than X% of all counts
             all <- filter(tmp, PercentAllSampleCells > other_threshold) %>%
                      bind_rows(other) %>%
                      arrange(desc(PercentAllSampleCells)) %>%
                      select(-PercentAllSampleCells)  %>%
                      spread(Marker,TotalMarkerCount)
-
-            all$Marker <- m
+            if(ncol(all) > 1){
+                all$Marker <- paste0(m," : ",rowSums(all[1,2:ncol(all)]))
+            } else {
+                all$Marker <- paste0(m," : ",all$Other)
+            } 
             all <- select(all, Marker, everything())
-
             ## add data for this sample to the rest
             pieTbl <- bind_rows(pieTbl, all)
         }
@@ -189,8 +185,11 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
         pie_data$Combo <- gsub(",[A-Z]{1,}\\d*-","",pie_data$Combo)
 
         ## get colors for this sample to match any previous samples
-        markerColors <- get_marker_colors(markerColors=markerColors,markerCombos=unique(pie_data$Combo),
-                                          custom=custom_colors)
+        if(custom_colors){
+            markerColors <- get_custom_colors(markerColors=markerColors,markerCombos=unique(pie_data$Combo))
+        } else {
+            markerColors <- get_marker_colors(markerColors=markerColors,markerCombos=unique(pie_data$Combo))
+        }
         sampleColors <- markerColors[unique(pie_data$Combo)] 
 
         ## plot data
@@ -199,18 +198,20 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
         p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
                facet_wrap(~Marker,nrow = numRows) +
                geom_bar(width=1,stat="identity",position="fill") +
-       labs(x = "", y = "", title = paste0(samp,"\n")) +
+               labs(x = "", y = "", title = paste0(samp,"\n")) +
                scale_fill_manual(values = sampleColors) + 
                theme(axis.text.x = element_blank(), 
-                     legend.text = element_text(size=8), 
-                     legend.key.size = unit(0.5,"cm"),legend.position="bottom") +
-               guides(fill=guide_legend(title=""))
+                     legend.text = element_text(size=6), 
+                     legend.key.size = unit(0.3,"cm"),
+                     legend.position="right",
+                     strip.text.x = element_text(size=6)) +
+               guides(fill=guide_legend(title="",nrow=length(unique(pie_data$Combo))/2))
         if(type == "pie"){
             p <- p + coord_polar("y")
         }
-
         print(p)
     }
+
     if(!is.null(pdfFile)){
         dev.off()
     }

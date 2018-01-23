@@ -5,9 +5,9 @@
 \title{Generate a XLSX file of counts for all markers in a given file}
 \usage{
 countMarkers(markerFile, dataDir, lf = NULL, v = TRUE, pad = 0,
-  countsXLSXFile = NULL, countsRDAFile = NULL, runCounts = TRUE,
-  runFracTotal = FALSE, runMedians = TRUE, altBases = c(),
-  debug = FALSE)
+  countsXLSXFile = NULL, countsRDAFile = NULL, writeXLSX = TRUE,
+  saveRDSfile = TRUE, runCounts = TRUE, runFracTotal = FALSE,
+  runMedians = TRUE, altBases = NULL, debug = FALSE)
 }
 \arguments{
 \item{markerFile}{File containing list of marker names}
@@ -22,6 +22,10 @@ DEFAULT = TRUE}
 be automatically generated according to input file names and padding}
 
 \item{countsRDAFile}{name of RDA file to write to; if NULL, RDA file will NOT be written}
+
+\item{writeXLSX}{write counts to XLSX file; DEFAULT=TRUE}
+
+\item{saveRDSfile}{save counts table to RDS file; DEFAULT=TRUE}
 
 \item{runCounts}{include counts sheet in output; DEFAULT=TRUE}
 

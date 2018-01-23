@@ -63,6 +63,67 @@ projectParams <- function(file){
             pp[[man[x,1]]] <- man[x,2]
         }
     }
+    if(is.null(pp$log)){
+        df <- file.path(pp$data_dir,dir(pp$data_dir)[grep("\\.rda$",dir(pp$data_dir))]) 
+        pp$log <- projectFileName(pp$markers,df,pp$pad,"log")
+    }
     return(pp)
+}
+
+#' Remove from counts tibble any FOV to be excluded
+#'
+#' Filter data to exclude specific FOV for specific samples
+#' 
+#' @param dat         counts tibble from countMarkers()
+#' @param exclusions  a string of exlusions in the form: Sample1:3+5+9,Sample2:1+16+22
+#' @param v           verbose - when set to TRUE, messages
+#'                              will be printed to screen as well as to file;
+#'                              DEFAULT = TRUE
+#' @param debug       print debug messages; default=FALSE
+#' @export
+remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
+    exclude_sample_fov <- trimws(unlist(strsplit(exclusions,",")))
+    for(ex in exclude_sample_fov){
+        samp <- unlist(strsplit(ex,":"))[1]
+        fovEx <- unlist(strsplit(ex,":"))[2]
+        fovEx <- unlist(strsplit(fovEx,"\\+"))
+        if(debug){ logMsg(paste0("Removing ",samp," FOV ",fovEx)) }
+        dat <- filter(dat, !(Sample == samp & FOV %in% fovEx))
+    }
+    return(dat)
+}
+
+#' Generate name of output file for marker stats based on 
+#' input file names
+#' 
+#' Use name of marker file and either a single data file name
+#' or the directory of data files to generate output file name
+#'
+#' @param markerFile    File containing list of marker names
+#' @param dataFiles     vector of data file(s)
+#' @param pad           amount that will be trimmed from FOV
+#' @param type          file type ("rda","txt","xlsx"); essentially
+#'                      the file extension
+#' @return  file name to be used for saving counts
+#' @export
+projectFileName <- function(markerFile,dataFiles,pad,type){
+    if(length(dataFiles)==1) {
+        outFile <- paste("markerTable",
+            gsub("_MegaTableV2.rda","",basename(dataFiles[1])),
+            file_path_sans_ext(basename(markerFile)),sep="_")
+        if(pad > 0){
+            outFile <- paste0(outFile, "__PAD_",pad)
+        }
+    } else {
+        outFile <- paste("markerTable",
+            basename(dirname(dataFiles[1])),
+            substr(digest(sort(dataFiles)),1,8),"__",
+            file_path_sans_ext(basename(markerFile)),sep="_")
+    }
+    if(pad > 0){
+        outFile <- paste0(outFile,"__PAD_",pad)
+    }
+    outFile <- paste0(outFile,".",type)
+    return(outFile)
 }
 
