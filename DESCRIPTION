@@ -15,7 +15,9 @@ Depends: R (>= 3.4.3),
     tools,
     kimisc,
     scales,
-    RColorBrewer    
+    RColorBrewer,
+    grid,
+    gridExtra    
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

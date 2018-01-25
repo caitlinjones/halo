@@ -386,7 +386,7 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
 #' @param countsXLSXFile   name of XLSX file to write to; if NULL, name will
 #'                         be automatically generated according to input file names and padding
 #' @param countsRDAFile    name of RDA file to write to; if NULL, RDA file will NOT be written
-#' @param writeXLSX        write counts to XLSX file; DEFAULT=TRUE
+#' @param writeXLSXfile    write counts to XLSX file; DEFAULT=TRUE
 #' @param saveRDSfile      save counts table to RDS file; DEFAULT=TRUE
 #' @param runCounts        include counts sheet in output; DEFAULT=TRUE
 #' @param runFracTotal     include fractions of total counts sheet in output; DEFAULT=FALSE
@@ -397,7 +397,7 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
 #' @param debug            print debug messages; DEFAULT=FALSE
 #' @export
 countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSXFile=NULL,
-               countsRDAFile=NULL, writeXLSX=TRUE, saveRDSfile=TRUE, runCounts=TRUE, 
+               countsRDAFile=NULL, writeXLSXfile=TRUE, saveRDSfile=TRUE, runCounts=TRUE, 
                runFracTotal=FALSE, runMedians=TRUE, altBases=NULL,debug=FALSE){
 
     if(debug){ logMsg("Reading marker file",v,lf,"DEBUG") }
@@ -407,7 +407,7 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
     logMsg(paste0("Generating counts for ", basename(markerFile), " and ", length(dataFiles) ,
                   " files in ", dataDir),v,lf) 
 
-    if(writeXLSX & is.null(countsXLSXFile)){ 
+    if(writeXLSXfile & is.null(countsXLSXFile)){ 
         countsXLSXFile <- projectFileName(markerFile,dataFiles,pad,"xlsx") 
     }
     if(saveRDSfile & is.null(countsRDAFile)){
@@ -469,7 +469,6 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
         logMsg("    Processing counts for each marker",v,lf)              
         for(i in 1:length(markerNames)){
             x <- markerNames[i]
-            #if(debug){ logMsg(paste0("[",i,"] ",x),v,lf,"DEBUG") }
             logMsg(paste0("      [",i,"] ",x),v,lf)
             indivMarkers <- unlist(strsplit(x,","))
 
@@ -543,7 +542,7 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
         }
     }
     
-    if(writeXLSX){
+    if(writeXLSXfile){
         if(is.null(countsXLSXFile)){
             countsXLSXFile <- projectFileName(markerFile,dataFiles,pad,"xlsx")
         }

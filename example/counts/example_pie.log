@@ -1,0 +1,48 @@
+Wed Jan 24 12:28:05 2018
+
+Generating pie charts with params:
+
+markers  =  CD3+MarkerCombos.txt
+data_dir  =  rda
+cancer  =  
+sample  =  
+pad  =  30
+fov  =  
+log  =  example_pie.log
+verbose  =  TRUE
+alt_bases  =  CD3,DAPI
+run_counts  =  TRUE
+run_frac_total  =  FALSE
+run_medians  =  TRUE
+pie_charts  =  FALSE
+counts_rda_file  =  example_counts.rda
+cell_type_markers  =  
+exclude_sample_fov  =  
+write_xlsx_file  =  TRUE
+save_rds_file  =  TRUE
+custom_colors  =  FALSE
+pdf_pie_charts_by_sample  =  FALSE
+other_threshold  =  0
+exclude_sample_fov      Untreated:2,PR:2+6+7+8+9+10+15+25+31+32+33+34,CR:11+23+24+25+26  =  
+
+#######################################################################
+
+[INFO]	Wed Jan 24 12:28:05 2018	Generating counts for CD3+MarkerCombos.txt and 2 files in rda
+[INFO]	Wed Jan 24 12:28:05 2018	PR_ObjectAnalysisData_MegaTableV2
+[INFO]	Wed Jan 24 12:30:26 2018	    Trimming 30 pixels from image
+[INFO]	Wed Jan 24 12:31:24 2018	    WARNING: Removing markers in data but NOT in markerFile: CD3-, LCA-, LCA, SOX10, CD163, CD14, MRC1, TGM2, CD27-, CD27, CD68, S100B-, S100B, KI67-, KI67, PD1-, PD1, LAG3, LAG3-, TIM3-, TIM3, CD56, B7H3-, B7H3, IDO1-, IDO1, MHCII-, MHCII, B2M-, B2M, CD25, CD25-
+[INFO]	Wed Jan 24 12:31:24 2018	    Processing counts for each marker
+[INFO]	Wed Jan 24 12:31:24 2018	      [1] CD3,CD4,CD8-,FOXP3-,CD20-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:36:39 2018	      [2] CD3,CD8,CD4-,FOXP3-,CD20-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:37:08 2018	      [3] CD3,FOXP3,CD4-,CD8-,CD20-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:37:36 2018	      [4] CD3,CD20,CD4-,CD8-,FOXP3-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:38:05 2018	      [5] CD3,DAPI
+[INFO]	Wed Jan 24 12:38:17 2018	Untreated_ObjectAnalysisData_MegaTableV2
+[INFO]	Wed Jan 24 12:40:18 2018	    Trimming 30 pixels from image
+[INFO]	Wed Jan 24 12:41:18 2018	    WARNING: Removing markers in data but NOT in markerFile: CD3-, LCA-, LCA, SOX10, KI67, KI67-, PD1-, PD1, LAG3-, LAG3, TIM3-, TIM3, CD56, B7H3, B7H3-, IDO1-, IDO1, MHCII-, MHCII, B2M, B2M-, CD25-, CD25, CD163, CD14, MRC1, TGM2, CD27-, CD27, CD68, S100B, S100B-
+[INFO]	Wed Jan 24 12:41:19 2018	    Processing counts for each marker
+[INFO]	Wed Jan 24 12:41:19 2018	      [1] CD3,CD4,CD8-,FOXP3-,CD20-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:41:47 2018	      [2] CD3,CD8,CD4-,FOXP3-,CD20-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:42:09 2018	      [3] CD3,FOXP3,CD4-,CD8-,CD20-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:42:30 2018	      [4] CD3,CD20,CD4-,CD8-,FOXP3-,CD56-,CD68-,CD163-,CD14-,MRC1-,TGM2-,SOX10-
+[INFO]	Wed Jan 24 12:42:50 2018	      [5] CD3,DAPI

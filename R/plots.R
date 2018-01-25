@@ -44,36 +44,52 @@ get_custom_colors <- function(markerColors=NULL,markerCombos=NULL){
     #CD3, CD4, CD8, FOXP3, AND/OR CD56 = different shades of blue
     #CD20 = green
     #SOX10 = yellow
-    #CD68, CD14, CD163, MRC1, AND/OR TGM2 = different shades of red
+    #CD4, CD68, CD14, CD163, MRC1, AND/OR TGM2 = different shades of red
     #any other combination of these markers = different shades of grey
     #any combination less than 2%/"other" = white
 
-    bls <- colorRampPalette(c("lightblue", "darkblue"))(length(grep("CD3|CD4|CD8|FOXP3|CD56",markerCombos))*3)
+    bls <- colorRampPalette(c("lightblue", "darkblue"))(length(grep("CD3|CD4|CD8|FOXP3|CD56",markerCombos))*10)
     bls <- setdiff(bls,markerColors)
-    reds <- colorRampPalette(c("red", "darkred"))(length(grep("CD68|CD14|CD163|MRC1|TGM2",markerCombos))*3)
+    reds <- colorRampPalette(c("red", "darkred"))(length(grep("CD4|CD68|CD14|CD163|MRC1|TGM2",markerCombos))*10)
     reds <- setdiff(reds,markerColors)
     grays <- colorRampPalette(c("white","black"))(256)   
     grays <- setdiff(grays,markerColors)
+    #purples <- colorRampPalette(c("purple","black"))(246)
+    browns <- colorRampPalette(c("brown","black"))(175)
+    darkblues <- colorRampPalette(c("darkblue","black"))(140)
+    darkgreens <- colorRampPalette(c("darkgreen","black"))(101)
+    lightyellow <- colorRampPalette(c("lightyellow","white"))(32)
+    pinks <- colorRampPalette(c("white","pink"))(103)
+    other <- c(grays,browns,darkgreens,lightyellow)#,pinks)
+
+    if(length(markerCombos) < 100){
+        extras <- grays
+    } else {
+        extras <- other
+    }
 
     for(m in markerCombos){
         mlst <- unlist(strsplit(m,","))
-        if(all(mlst %in% c("CD3","CD4","CD8","FOXP3","CD56"))){
-            n <- sample(1:length(bls),1)
-            markerColors <- c(markerColors, bls[n])
-            bls <- bls[-n]
-        } else if(all(mlst %in% c("CD68","CD14","CD163","MRC1","TGM2"))){
-            n <- sample(1:length(reds),1)
-            markerColors <- c(markerColors, reds[n])
-            reds <- reds[-n]
+        if(m == "CD4"){
+            newColor = "#094dba"
         } else if(m == "SOX10"){
-            markerColors <- c(markerColors,"#ffff80")
+            newColor <- "#ffff80"
         } else if(m == "CD20"){
-            markerColors <- c(markerColors,"#28b463")
+            newColor <- "#28b463"
+        } else if(all(mlst %in% c("CD3","CD4","CD8","FOXP3","CD56"))){
+            n <- sample(1:length(bls),1)
+            newColor <- bls[n]
+            bls <- bls[-n]
+        } else if(all(mlst %in% c("CD4","CD68","CD14","CD163","MRC1","TGM2"))){
+            n <- sample(1:length(reds),1)
+            newColor <- reds[n] 
+            reds <- reds[-n]
         } else {
-            n <- sample(1:length(grays),1)
-            markerColors <- c(markerColors, grays[n])
-            grays <- grays[-n]
+            n <- sample(1:length(extras),1)
+            newColor <- extras[n]
+            extras <- extras[-n]
         }
+        markerColors <- c(markerColors,newColor)
         names(markerColors)[length(markerColors)] <- m
     }
 
@@ -84,13 +100,54 @@ get_custom_colors <- function(markerColors=NULL,markerCombos=NULL){
 #' 
 #' Extract a legend from a plot generated with ggplot
 #' 
-#' @param plt  a plot generated with ggplot 
+#' @param plt    a plot generated with ggplot 
 g_legend <- function(plt){ 
-    tmp <- ggplot_gtable(ggplot_build(a.gplot)) 
+    tmp <- ggplot_gtable(ggplot_build(plt)) 
     leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
     legend <- tmp$grobs[[leg]] 
     return(legend)
-} 
+}
+
+#' Remove a legend from a gplot
+#' 
+#' Remove a legend from a gplot
+#'
+#' @param plt    a plot generated with ggplot 
+remove_legend <- function(plt){
+    tmp <- ggplot_gtable(ggplot_build(plt))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    tmp$grobs[[leg]] <- NULL
+    return(tmp)
+}
+
+grid_arrange_shared_legend <- function(..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")) {
+
+  plots <- list(...)
+  position <- match.arg(position)
+  g <- ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
+  legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+  lheight <- sum(legend$height)
+  lwidth <- sum(legend$width)
+  gl <- lapply(plots, function(x) x + theme(legend.position="none"))
+  gl <- c(gl, ncol = ncol, nrow = nrow)
+
+  combined <- switch(position,
+                     "bottom" = arrangeGrob(do.call(arrangeGrob, gl),
+                                            legend,
+                                            ncol = 1,
+                                            heights = unit.c(unit(1, "npc") - lheight, lheight)),
+                     "right" = arrangeGrob(do.call(arrangeGrob, gl),
+                                           legend,
+                                           ncol = 2,
+                                           widths = unit.c(unit(1, "npc") - lwidth, lwidth)))
+
+  grid.newpage()
+  grid.draw(combined)
+
+  # return gtable invisibly
+  invisible(combined)
+
+}
 
 #' Make a grid of pie charts, one for each given marker showing
 #' the percentages of all the marker combinations in which that 
@@ -112,8 +169,8 @@ g_legend <- function(plt){
 #' @param   debug               print debug messages; DEFAULT=FALSE
 #' @export
 plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_threshold=0.05, 
-                                    exclude_sample_fov=NULL, pdfFile=NULL, v=TRUE, logFile=NULL, 
-                                    debug=FALSE,custom_colors=FALSE){
+                                    exclude_sample_fov=NULL, pdfFile=NULL, v=TRUE, 
+                                    logFile=NULL, debug=FALSE,custom_colors=FALSE){
 
     ## set up colors
     markerColors <- c()
@@ -130,6 +187,7 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
         countsTable <- remove_exclusions(countsTable, exclude_sample_fov, v=v, debug=debug)
     }
 
+    allPlots <- c()
     for(samp in unique(countsTable$Sample)){
         if(debug){ logMsg(samp,v,logFile,"DEBUG") }
 
@@ -160,7 +218,7 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
             other <- filter(tmp, PercentAllSampleCells <= other_threshold) %>%
                        summarise(TotalMarkerCount = sum(TotalMarkerCount),
                                  PercentAllSampleCells = sum(PercentAllSampleCells))
-            other$Marker <- "Other"
+            other$Marker <- paste0("Other = <",other_threshold*100,"%")
             ## separate markers that make up more than X% of all counts
             all <- filter(tmp, PercentAllSampleCells > other_threshold) %>%
                      bind_rows(other) %>%
@@ -181,8 +239,11 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
                     group_by(Marker) %>%
                     mutate(labels=paste0(round((Count/sum(Count,na.rm=TRUE)) * 100, 1),"%")) %>%
                     drop_na()
+        pie_data <- filter(pie_data, Count > 0)
         ## remove negative markers from the combos for clarity 
         pie_data$Combo <- gsub(",[A-Z]{1,}\\d*-","",pie_data$Combo)
+
+        logMsg(paste0("Sample ", samp, " has ",length(unique(pie_data$Combo))," marker combinations"),v,logFile) 
 
         ## get colors for this sample to match any previous samples
         if(custom_colors){
@@ -195,21 +256,50 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
         ## plot data
         numRows <- NULL
         if(type == "bar"){ numRows <- 1 }
-        p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
-               facet_wrap(~Marker,nrow = numRows) +
-               geom_bar(width=1,stat="identity",position="fill") +
-               labs(x = "", y = "", title = paste0(samp,"\n")) +
-               scale_fill_manual(values = sampleColors) + 
-               theme(axis.text.x = element_blank(), 
-                     legend.text = element_text(size=6), 
-                     legend.key.size = unit(0.3,"cm"),
-                     legend.position="right",
+
+        ## TEMPORARY HACK until I can figure out how to print legend separately: 
+        ## print pies without legend first in order to make sure they are bigger 
+        ## and readable; then print again with legend
+
+        if(length(unique(pie_data$Combo)) > 70){
+            ## plot WITHOUT legend and print
+            p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
+                   facet_wrap(~Marker,nrow = numRows) +
+                   geom_bar(width=1,stat="identity",position="fill") +
+                   labs(x = "", y = "", title = paste0(samp,"\n")) +
+                   scale_fill_manual(values = sampleColors) + 
+                   theme(axis.text.x = element_blank(), 
+         #            legend.text = element_text(size=6), 
+         #            legend.key.size = unit(0.3,"cm"),
+                     legend.position = "none",
                      strip.text.x = element_text(size=6)) +
-               guides(fill=guide_legend(title="",nrow=length(unique(pie_data$Combo))/2))
-        if(type == "pie"){
-            p <- p + coord_polar("y")
-        }
+                   guides(fill=guide_legend(title="",nrow=length(unique(pie_data$Combo))/4))
+            if(type == "pie"){
+                p <- p + coord_polar("y")
+            }
         print(p)
+        }
+
+        ## add legend and print
+    #    p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
+    #           facet_wrap(~Marker,nrow = numRows) +
+    #           geom_bar(width=1,stat="identity",position="fill") +
+    #           labs(x = "", y = "", title = paste0(samp,"\n")) +
+    #           scale_fill_manual(values = sampleColors) +
+    #           theme(axis.text.x = element_blank(),
+    #                 legend.text = element_text(size=6),
+    #                 legend.key.size = unit(0.3,"cm"),
+    #                 legend.position = "right",
+    #                 strip.text.x = element_text(size=6)) +
+    #           guides(fill=guide_legend(title="",nrow=length(unique(pie_data$Combo))/4))
+    #    if(type == "pie"){
+    #        p <- p + coord_polar("y")
+    #    }
+        p <- p + theme(legend.text = element_text(size=6),
+                       legend.key.size = unit(0.3,"cm"),
+                       legend.position = "right")
+        print(p)
+
     }
 
     if(!is.null(pdfFile)){

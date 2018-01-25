@@ -37,7 +37,7 @@ projectParams <- function(file){
                data_dir=NULL,
                cancer=NULL,
                sample=NULL,
-               pad=NULL,
+               pad=0,
                fov=NULL,
                log=NULL,
                verbose=TRUE,
@@ -49,7 +49,17 @@ projectParams <- function(file){
                counts_rda_file=NULL,
                counts_xlsx_file=NULL,
                cell_type_markers=NULL,
-               exclude_sample_fov=NULL)
+               exclude_sample_fov=NULL,
+               exclude_sample=NULL,
+               exclude_fov=NULL,
+               exclude_marker=NULL,
+               write_xlsx_file=TRUE,
+               save_rds_file=TRUE,
+               custom_colors=FALSE,
+               pdf_pie_charts_by_sample=FALSE,
+               other_threshold=0,
+               draw_legend=TRUE
+               )
 
     man <- read.delim(file, sep="\t", comment.char="#", header=FALSE, stringsAsFactors=FALSE)[,c(1,2)]
     for(x in 1:nrow(man)){
@@ -64,8 +74,12 @@ projectParams <- function(file){
         }
     }
     if(is.null(pp$log)){
-        df <- file.path(pp$data_dir,dir(pp$data_dir)[grep("\\.rda$",dir(pp$data_dir))]) 
-        pp$log <- projectFileName(pp$markers,df,pp$pad,"log")
+        if(!is.null(pp$data_dir)){
+            df <- file.path(pp$data_dir,dir(pp$data_dir)[grep("\\.rda$",dir(pp$data_dir))]) 
+            pp$log <- projectFileName(pp$markers,df,pp$pad,"log")
+        } else {
+            pp$log <- projectFileName(pp$markers,c("_"),pp$pad,"log")
+        }
     }
     return(pp)
 }
@@ -74,22 +88,56 @@ projectParams <- function(file){
 #'
 #' Filter data to exclude specific FOV for specific samples
 #' 
-#' @param dat         counts tibble from countMarkers()
-#' @param exclusions  a string of exlusions in the form: Sample1:3+5+9,Sample2:1+16+22
-#' @param v           verbose - when set to TRUE, messages
-#'                              will be printed to screen as well as to file;
-#'                              DEFAULT = TRUE
-#' @param debug       print debug messages; default=FALSE
+#' @param dat                   counts tibble from countMarkers()
+#' @param exclude_sample        comma separated string of samples to exclude completely; i.e., all FOV
+#'                              and all markers
+#' @param exclude_marker        comma separated string of markers to exclude completely; i.e., all FOV
+#'                              in all samples
+#' @param exclude_sample_marker a string of exclusions in the form: Sample1:CD3+CD4+TGM2,Sample2:CD20
+#' @param exclude_sample_fov    a string of exclusions in the form: Sample1:3+5+9,Sample2:1+16+22
+#' @param v                       verbose - when set to TRUE, messages will be printed to screen 
+#'                                as well as to file; DEFAULT = TRUE
+#' @param logFile               log file
+#' @param debug                 print debug messages; default=FALSE
 #' @export
-remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
-    exclude_sample_fov <- trimws(unlist(strsplit(exclusions,",")))
-    for(ex in exclude_sample_fov){
-        samp <- unlist(strsplit(ex,":"))[1]
-        fovEx <- unlist(strsplit(ex,":"))[2]
-        fovEx <- unlist(strsplit(fovEx,"\\+"))
-        if(debug){ logMsg(paste0("Removing ",samp," FOV ",fovEx)) }
-        dat <- filter(dat, !(Sample == samp & FOV %in% fovEx))
-    }
+remove_exclusions <- function(dat, exclude_sample=NULL, exclude_marker=NULL, exclude_sample_marker=NULL,
+                                  exclude_sample_fov=NULL, v=TRUE, logFile=NULL, debug=FALSE){
+    ## remove specific FOV from specific samples
+    if(!is.null(exclude_sample_fov)){
+        exclude_sample_fov <- trimws(unlist(strsplit(exclude_sample_fov,",")))
+        for(ex in exclude_sample_fov){
+            samp <- unlist(strsplit(ex,":"))[1]
+            fovEx <- unlist(strsplit(ex,":"))[2]
+            fovEx <- unlist(strsplit(fovEx,"\\+"))
+            logMsg(paste0("Removing ",samp," FOV ",fovEx),v,logFile) 
+            dat <- filter(dat, !(Sample == samp & FOV %in% fovEx))
+        }
+    } else if(!is.null(exclude_sample_marker)){
+        exclude_sample_marker <- trimws(unlist(strsplit(exclude_sample_marker,",")))
+        warning("\n\nWARNING: REMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY 
+MARKER COMBINATION WITH THAT/THOSE INDIVIDUAL MARKER(S)\n\n")
+        for(ex in exclude_sample_marker){
+            samp <- unlist(strsplit(ex,":"))[1]
+            mEx <- unlist(strsplit(ex,":"))[2]
+            mEx <- unlist(strsplit(mEx,"\\+"))
+            logMsg("REMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY MARKER COMBINATION
+                 WITH THAT/THOSE INDIVIDUAL MARKER(S)",v,logFile,"WARNING")
+            logMsg(paste0("Setting count(s) for ",samp," marker ",mEx," to NA"),v,logFile)
+            for(m in mEx){
+                dat[which(dat$Sample == samp),grep(paste0("(^|,)",m,"-*(,|$)"),names(dat))] <- NA
+            }
+        }
+    } else if(!is.null(exclude_sample)){
+        logMsg(paste0("Removing sample(s) ",exclude_sample," from ALL markers"),v,logFile)
+        exclude_sample <- trimws(unlist(strsplit(exclude_sample,",")))
+        dat <- filter(dat, !Sample %in% exclude_sample)
+    } else if(!is.null(exclude_marker)){
+        logMsg(paste0("Removing marker(s) ",exclude_marker," from ALL samples"),v,logFile)
+        exclude_marker <- trimws(unlist(strsplit(exclude_marker,",")))
+        for(em in exclude_marker){
+            dat <- select(dat, -grep(paste0("(^|,)",em,"-*(,|$)")))        
+        }
+    } 
     return(dat)
 }
 
@@ -107,7 +155,9 @@ remove_exclusions <- function(dat,exclusions,v=TRUE,debug=FALSE){
 #' @return  file name to be used for saving counts
 #' @export
 projectFileName <- function(markerFile,dataFiles,pad,type){
-    if(length(dataFiles)==1) {
+    if(is.null(markerFile) || is.null(data.Files)){
+        outFile <- paste0("halo_",format(Sys.Date(), format="%Y%m%d"))
+    } else if(length(dataFiles)==1) {
         outFile <- paste("markerTable",
             gsub("_MegaTableV2.rda","",basename(dataFiles[1])),
             file_path_sans_ext(basename(markerFile)),sep="_")
