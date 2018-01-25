@@ -4,16 +4,27 @@
 \alias{remove_exclusions}
 \title{Remove from counts tibble any FOV to be excluded}
 \usage{
-remove_exclusions(dat, exclusions, v = TRUE, debug = FALSE)
+remove_exclusions(dat, exclude_sample = NULL, exclude_marker = NULL,
+  exclude_sample_marker = NULL, exclude_sample_fov = NULL, v = TRUE,
+  logFile = NULL, debug = FALSE)
 }
 \arguments{
 \item{dat}{counts tibble from countMarkers()}
 
-\item{exclusions}{a string of exlusions in the form: Sample1:3+5+9,Sample2:1+16+22}
+\item{exclude_sample}{comma separated string of samples to exclude completely; i.e., all FOV
+and all markers}
 
-\item{v}{verbose - when set to TRUE, messages
-will be printed to screen as well as to file;
-DEFAULT = TRUE}
+\item{exclude_marker}{comma separated string of markers to exclude completely; i.e., all FOV
+in all samples}
+
+\item{exclude_sample_marker}{a string of exclusions in the form: Sample1:CD3+CD4+TGM2,Sample2:CD20}
+
+\item{exclude_sample_fov}{a string of exclusions in the form: Sample1:3+5+9,Sample2:1+16+22}
+
+\item{v}{verbose - when set to TRUE, messages will be printed to screen 
+as well as to file; DEFAULT = TRUE}
+
+\item{logFile}{log file}
 
 \item{debug}{print debug messages; default=FALSE}
 }
