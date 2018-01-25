@@ -17,24 +17,6 @@ loadHalo <- function(cancerType, sample, FOV=NULL){
     return(readRDS(system.file("extdata", fileName, package="halo"))) 
 }
 
-#' Split data in *.rda file by FOV (SPOT)
-#' 
-#' Take in *.rda file containing data for multiple
-#' FOV and output one *.rda file for each one. Input
-#' tibble must have FOV column named "SPOT". Output
-#' file will be named "FOV_[$SPOT].rda"
-#' 
-#' @param dat      input tibble/data.frame
-#' @param outDir   output directory
-#' @export
-split_by_fov <- function(dat,outDir){
-    for(i in levels(as.factor(dat$SPOT))){
-        fname <- file.path(outDir,paste0("FOV_",i))
-        fov <- filter(dat, SPOT==i)
-        saveRDS(fov, paste0(fname,".rda"))
-    }
-}
-
 #' Remove from data markers that are not in marker file
 #' 
 #' Remove from data markers that are not in marker file

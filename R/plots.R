@@ -8,7 +8,7 @@
 #' @param markerCombos  vector of marker combinations to add to MarkerColors; only to be
 #'                      used when 'custom' is set to FALSE
 #' @export
-get_marker_colors <- function(markerColors=NULL,markerCombos=NULL){
+getMarkerColors <- function(markerColors=NULL,markerCombos=NULL){
     qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual' | brewer.pal.info$category == 'div',]
     col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
     col_vector <- col_vector[-which(col_vector == "#FFFF99")] ## remove ugly yellow
@@ -40,7 +40,7 @@ get_marker_colors <- function(markerColors=NULL,markerCombos=NULL){
 #' @param markerCombos  vector of marker combinations to add to MarkerColors; only to be
 #'                      used when 'custom' is set to FALSE
 #' @export
-get_custom_colors <- function(markerColors=NULL,markerCombos=NULL){
+getCustomColors <- function(markerColors=NULL,markerCombos=NULL){
     #CD3, CD4, CD8, FOXP3, AND/OR CD56 = different shades of blue
     #CD20 = green
     #SOX10 = yellow
@@ -101,7 +101,7 @@ get_custom_colors <- function(markerColors=NULL,markerCombos=NULL){
 #' Extract a legend from a plot generated with ggplot
 #' 
 #' @param plt    a plot generated with ggplot 
-g_legend <- function(plt){ 
+getLegend <- function(plt){ 
     tmp <- ggplot_gtable(ggplot_build(plt)) 
     leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
     legend <- tmp$grobs[[leg]] 
@@ -113,14 +113,14 @@ g_legend <- function(plt){
 #' Remove a legend from a gplot
 #'
 #' @param plt    a plot generated with ggplot 
-remove_legend <- function(plt){
+removeLegend <- function(plt){
     tmp <- ggplot_gtable(ggplot_build(plt))
     leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
     tmp$grobs[[leg]] <- NULL
     return(tmp)
 }
 
-grid_arrange_shared_legend <- function(..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")) {
+gridArrangeSharedLegend <- function(..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")) {
 
   plots <- list(...)
   position <- match.arg(position)
@@ -158,7 +158,7 @@ grid_arrange_shared_legend <- function(..., ncol = length(list(...)), nrow = 1, 
 #' @param   type                type of chart ["bar"|"pie"]; default="bar"
 #' @param   other_threshold     all markers making up less that this percentage will be put togther in 
 #'                              a marker combination named 'other'; default=0.05
-#' @param   custom_colors       use color scheme defined in get_marker_colors(); TO DO: CHANGE THIS
+#' @param   custom_colors       use color scheme defined in getMarkerColors(); TO DO: CHANGE THIS
 #' @param   exclude_sample_fov  a string of Sample FOVs to exclude from analysis in the form: 
 #'                                  'Sample1:2+4+3,Sample2:1,Sample3:2+4' 
 #' @param   pdfFile             output PDF file
@@ -168,7 +168,7 @@ grid_arrange_shared_legend <- function(..., ncol = length(list(...)), nrow = 1, 
 #' @param   logFile             file to write log messages to; DEFAULT=NULL
 #' @param   debug               print debug messages; DEFAULT=FALSE
 #' @export
-plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_threshold=0.05, 
+plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_threshold=0.05, 
                                     exclude_sample_fov=NULL, pdfFile=NULL, v=TRUE, 
                                     logFile=NULL, debug=FALSE,custom_colors=FALSE){
 
@@ -184,7 +184,7 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
 
     ## remove any exclusions
     if(!is.null(exclude_sample_fov)){
-        countsTable <- remove_exclusions(countsTable, exclude_sample_fov, v=v, debug=debug)
+        countsTable <- removeExclusions(countsTable, exclude_sample_fov, v=v, debug=debug)
     }
 
     allPlots <- c()
@@ -247,9 +247,9 @@ plot_marker_percentages <- function(countsTable, markerNames, type="bar", other_
 
         ## get colors for this sample to match any previous samples
         if(custom_colors){
-            markerColors <- get_custom_colors(markerColors=markerColors,markerCombos=unique(pie_data$Combo))
+            markerColors <- getCustomColors(markerColors=markerColors,markerCombos=unique(pie_data$Combo))
         } else {
-            markerColors <- get_marker_colors(markerColors=markerColors,markerCombos=unique(pie_data$Combo))
+            markerColors <- getMarkerColors(markerColors=markerColors,markerCombos=unique(pie_data$Combo))
         }
         sampleColors <- markerColors[unique(pie_data$Combo)] 
 

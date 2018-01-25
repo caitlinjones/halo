@@ -1,3 +1,50 @@
+#' Split data in *.rda file by FOV (SPOT)
+#' 
+#' Take in *.rda file containing data for multiple
+#' FOV and output one *.rda file for each one. Input
+#' tibble must have FOV column named "SPOT". Output
+#' file will be named "FOV_[$SPOT].rda"
+#' 
+#' @param dat      input tibble/data.frame
+#' @param outDir   output directory
+#' @export
+splitByFov <- function(dat,out.dir){
+    for(i in levels(as.factor(dat$SPOT))){
+        fname <- file.path(out.dir,paste0("FOV_",i))
+        fov <- filter(dat, SPOT==i)
+        saveRDS(fov, paste0(fname,".rda"))
+    }
+}
+
+#' Get all possible combinations of markers
+#'
+#' Given a vector of single markers, return a list
+#' of all possible combinations of those markers,
+#' including both positive and negative variations
+#' 
+#' @param markers  vector of single markers
+#' @return  list of all combinations
+#' @export
+getAllCombos(markers){
+    all.combos = list()
+    ## get all combinations of markers
+    for(x in 1:length(markers)){
+        ## get all combos of x
+        combos = combn(markers,x,simplify=FALSE)
+        all.combos = c(all.combos, combos)
+    }
+
+    for(c in 1:length(all.combos)){
+        combo = all.combos[[c]]
+        if(length(combo) < length(markers)){
+            all.combos[[c]] <- c(combo,paste0(setdiff(markers,combo),"-"))
+        }
+        all.combos[[c]] <- paste0(all.combos[[c]],collapse=",")
+    }
+    return(all.combos)
+}
+
+
 #' Log project parameters
 #' 
 #' Log all parameters set using either command line arguments
@@ -123,7 +170,7 @@ projectParams <- function(file){
 #' @param logFile               log file
 #' @param debug                 print debug messages; default=FALSE
 #' @export
-remove_exclusions <- function(dat, exclude_sample=NULL, exclude_marker=NULL, exclude_sample_marker=NULL,
+removeExclusions <- function(dat, exclude_sample=NULL, exclude_marker=NULL, exclude_sample_marker=NULL,
                                   exclude_sample_fov=NULL, v=TRUE, logFile=NULL, debug=FALSE){
     ## remove specific FOV from specific samples
     if(!is.null(exclude_sample_fov)){

@@ -77,7 +77,7 @@ if(pp$pie_charts){
         pdfFile <- gsub(".txt","_pie_charts.pdf",pp$markers)
     }
     markerNames <- trimws(unlist(strsplit(pp$cell_type_markers,",")))
-    plot_marker_percentages(countsTbl,markerNames,type="pie",other_threshold=as.numeric(pp$other_threshold),
+    plotMarkerPercentages(countsTbl,markerNames,type="pie",other_threshold=as.numeric(pp$other_threshold),
                               exclude_sample_fov=pp$exclude_sample_fov, pdfFile=pp$pdf_pie_charts_by_sample,
                               v=pp$verbose,logFile=pp$log,debug=args$debug,custom_colors=pp$custom_colors)
 }
