@@ -18,27 +18,20 @@ parser$add_argument("-m", "--manifest", type="character", default=NULL, help="fi
 ## args required if manifest not given
 parser$add_argument("-mf", "--markers", type="character", help="comma separated file containing marker information")
 parser$add_argument("-d", "--data_dir", type="character", default=".", help="directory containing *.rda files of image data")
+
+## optional arguments
 parser$add_argument("-p", "--pad", type="integer", default=0, help="add this much padding around all sides of FOV")
 parser$add_argument("--run_frac_total", action="store_true", help="add sheet to counts file containing fractions of total cells")
 parser$add_argument("--run_medians", action="store_true", help="add sheet to counts file containing median counts")
 parser$add_argument("--alt_bases", default=NULL, help="comma separated string of markers to use as alternate 'baselines'")
 parser$add_argument("--counts_xlsx_file", type="character", help="*.xlsx file of count")
+
 parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="print extra output")
 parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
 parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
 
 args <- parser$parse_args()
 ####################################################
-
-logParams <- function(x,action="Generating pie charts"){
-    #for(n in names(x)){ if(is.null(x[[n]])){ x[[n]] <- NA } }
-    write(date(),file=x$log)
-    write(paste0("\n",action," with params:\n"),file=x$log,append=TRUE)
-    for(n in names(x)){
-        write(paste(n," = ",paste(x[[n]],collapse=",")), file=x$log, append=TRUE)
-    }
-    write("\n#######################################################################\n",file=x$log,append=TRUE)
-}
 
 pp <- NULL
 

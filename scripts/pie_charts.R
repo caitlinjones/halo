@@ -16,23 +16,13 @@ parser$add_argument("-m", "--manifest", type="character", default=NULL, help="fi
 ## args required if manifest not given
 parser$add_argument("--cell_type_markers", type="character", default=NULL, help="comma-separated string of markers, for each of which a pie chart will be generated; e.g., 'CD3,CD4,CD8,CD20'")
 parser$add_argument("-c", "--counts_rda_file", type="character", help="*.rda file containing list of counts-related tables (output of counts.R)")
+## optional args
 parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="print extra output")
 parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
 parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
 
 args <- parser$parse_args()
 ####################################################
-
-
-logParams <- function(x,action="Generating pie charts"){
-    #for(n in names(x)){ if(is.null(x[[n]])){ x[[n]] <- NA } }
-    write(date(),file=x$log)
-    write(paste0("\n",action," with params:\n"),file=x$log,append=TRUE)
-    for(n in names(x)){
-        write(paste(n," = ",paste(x[[n]],collapse=",")), file=x$log, append=TRUE)
-    }
-    write("\n#######################################################################\n",file=x$log,append=TRUE)
-}
 
 pp <- NULL
 

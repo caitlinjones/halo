@@ -32,17 +32,6 @@ parser$add_argument("--counts_xlsx_file", type="character", help="*.xlsx file of
 args <- parser$parse_args()
 ####################################################
 
-
-logParams <- function(x,action="Generating pie charts"){
-    #for(n in names(x)){ if(is.null(x[[n]])){ x[[n]] <- NA } }
-    write(date(),file=x$log)
-    write(paste0("\n",action," with params:\n"),file=x$log,append=TRUE)
-    for(n in names(x)){
-        write(paste(n," = ",paste(x[[n]],collapse=",")), file=x$log, append=TRUE)
-    }
-    write("\n#######################################################################\n",file=x$log,append=TRUE)
-}
-
 pp <- NULL
 
 ## get all params from manifest if it exists, otherwise get them from command line
