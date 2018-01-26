@@ -106,55 +106,6 @@ addMissingMarkers <- function(dat, m2, v=FALSE, logFile=NULL, debug=FALSE){
 }
 
 
-#' Modify data to sync to markers in marker file
-#' 
-#' Filter out any markers in data that are not in marker file; Add to data
-#' markers in marker file but not  
-#' Print a warning with a list of any markers that are in data but not
-#' marker file OR that are in marker file but not data
-#'
-#' @param dat       tibble containing marker data
-#' @param m2        list of individual markers in marker file
-#' @param v         verbose - when set to TRUE, messages
-#'                  will be printed to screen as well as to file;
-#'                  DEFAULT = TRUE
-#' @param logFile   file to write log messages to; DEFAULT=NULL
-#' @return  a tibble with extra markers filtered out
-#' @export
-validateMarkers <- function(dat,m2,v=FALSE,logFile=NULL){
-    finalMarkers <- c()
-    datMarkers <- unique(dat$Marker)
-
-    if(length(setdiff(datMarkers,m2)) > 0){
-        msg <- paste0("    WARNING: Markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
-        if(!is.null(logFile)){
-            logMsg(msg,v=FALSE,logFile)
-        } else {
-            warning("Markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
-        }
-        ## remove markers in data but not in marker file
-        dat <- filter(dat, Marker %in% finalMarkers)
-    }
-
-    if(length(setdiff(m2, datMarkers)) > 0){
-        msg <- paste0("    WARNING: Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
-        if(!is.null(logFile)){
-            logMsg(msg,v=FALSE,logFile)
-        } else {
-            warning("Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
-        }
-        ## add markers in marker file but not data, set Value to NA
-        for(m in setdiff(m2, datMarkers)){
-            tmp <- distinct(dat, UUID, Sample, FOV, SLICE)
-            tmp$MarkerName <- m
-            tmp$Value <- NA
-            dat <- bind_rows(dat, tmp)
-        }
-        finalMarkers <- c(datMarkers, setdiff(m2, datMarkers))
-    }
-    return(dat)
-}
-
 #' Make sure list of unique FOVs contains only one element
 #'
 #' If the list is longer than one element, print error message and EXIT 
