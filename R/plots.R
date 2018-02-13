@@ -308,3 +308,70 @@ plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_th
 }
 
 
+
+
+######### "SPATIAL" PLOTS ########
+
+### FIGURE OUT WHAT EACH OF THESE DOES AND RENAME
+plotFOV<-function(bbData,bnd,sampleName,spot,interfaceSize=boundaryInterfaceSize) {
+    bb=getBoundingBoxL(bnd %>% bind_rows)
+    bb=joinBoundingBoxes(bb,bbFOV0)
+    bb=padBoundingBox(bb,1.1*interfaceSize)
+
+    spMax=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bb))),"maxBB")))
+
+    spFOV=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bbFOV0))),"FOV")))
+
+    ## type="n": blank canvas
+    plot(1,type="n",xlim=c(bb$X0,bb$X1),ylim=c(bb$Y0,bb$Y1),
+        xlab="",ylab="",main=paste(sampleName,spot))
+
+    ## col 8 = gray
+    lines(spFOV,col=8,lwd=2)
+
+    spData=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bbData))),"Data")))
+
+    lines(spData,col=1,lty=2)
+
+    lines(spMax,col=8,lty=3)
+
+}
+
+plotFOV0<-function(bbData,sampleName,spot,bbPlot,bbFOV0) {
+    spFOV=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bbFOV0))),"FOV")))
+    bb=bbFOV0
+    plot(1,type="n",xlim=c(bb$X0,bb$X1),ylim=c(bb$Y0,bb$Y1),
+        xlab="",ylab="",main=paste(sampleName,spot))
+
+    ## solid gray rectangle
+    lines(spFOV,col=8,lwd=2)
+
+    spData=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bbData))),"Data")))
+
+    ## black dotted line
+    lines(spData,col=1,lty=2)
+
+}
+
+plotFOV1<-function(bbData,sampleName,spot,bbPlot,bbFOV0) {
+    ## solid gray rectangle
+    spFOV=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bbFOV0))),"FOV")))
+    bb=bbFOV0
+    plot(1,type="n",xlim=c(bbPlot$X0,bbPlot$X1),ylim=c(bbPlot$Y0,bbPlot$Y1),
+        xlab="",ylab="",main=paste(sampleName,spot))
+
+    lines(spFOV,col=8,lwd=2)
+
+    spData=SpatialPolygons(list(
+        Polygons(list(Polygon(boundingBoxToRect(bbData))),"Data")))
+
+    lines(spData,col=1,lty=2)
+
+}
+

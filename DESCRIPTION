@@ -6,18 +6,22 @@ Authors@R: c(person("Nicholas", "Socci", email = "socci@cbio.mskcc.org", role = 
             )
 Description: Analyze and visualize Halo data
 Depends: R (>= 3.4.3),
-    tidyverse,
-    magrittr,
-    rJava,
-    xlsxjars,
-    xlsx,
     digest,
-    tools,
-    kimisc,
-    scales,
-    RColorBrewer,
     grid,
-    gridExtra    
+    gridExtra,
+    kimisc,
+    magrittr,
+    raster,
+    RColorBrewer,
+    rJava,
+    scales,
+    SearchTrees,
+    sp,
+    tidyverse,
+    tools,
+    xlsx,
+    xlsxjars,
+    XML    
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

@@ -1,3 +1,26 @@
+markerStringToPredicate<-function(ss) {
+    mm=strsplit(ss,",")[[1]]
+    mm_neg=gsub("-","",mm[grepl("-$",mm)])
+    mm_pos=mm[!grepl("-$",mm)]
+    if(len(mm_neg)>0) {
+        paste(
+            paste(mm_pos,"== 1"),
+            paste(mm_neg,"== 0"),
+            sep=" & ",collapse=" & "
+        )
+    } else {
+        paste(
+            paste(mm_pos,"== 1"),
+            sep=" & ",collapse=" & "
+        )
+    }
+}
+
+markerStringToSelectRE<-function(ss){
+    mm=strsplit(gsub("-","",ss),",")[[1]]
+    paste0("(",paste(mm,collapse="|"),")")
+}
+
 #' Split data in *.rda file by FOV (SPOT)
 #' 
 #' Take in *.rda file containing data for multiple
@@ -25,7 +48,7 @@ splitByFov <- function(dat,out.dir){
 #' @param markers  vector of single markers
 #' @return  list of all combinations
 #' @export
-getAllCombos(markers){
+getAllCombos <- function(markers){
     all.combos = list()
     ## get all combinations of markers
     for(x in 1:length(markers)){
@@ -128,7 +151,10 @@ projectParams <- function(file){
                custom_colors=FALSE,
                pdf_pie_charts_by_sample=FALSE,
                other_threshold=0,
-               draw_legend=TRUE
+               draw_legend=TRUE,
+               cell_types_file=NULL,
+               annotations_dir=NULL,
+               debug=FALSE
                )
 
     man <- read.delim(file, sep="\t", comment.char="#", header=FALSE, stringsAsFactors=FALSE)[,c(1,2)]
