@@ -2,12 +2,14 @@ markerStringToPredicate<-function(ss) {
     mm=strsplit(ss,",")[[1]]
     mm_neg=gsub("-","",mm[grepl("-$",mm)])
     mm_pos=mm[!grepl("-$",mm)]
-    if(len(mm_neg)>0) {
+    if(len(mm_pos) > 0 & len(mm_neg) > 0) {
         paste(
             paste(mm_pos,"== 1"),
             paste(mm_neg,"== 0"),
             sep=" & ",collapse=" & "
         )
+    } else if(len(mm_pos) == 0 & len(mm_neg) > 0){
+        paste(mm_neg," == 0", collapse=" & ")
     } else {
         paste(
             paste(mm_pos,"== 1"),
@@ -128,6 +130,7 @@ logMsg <- function(msg, v=TRUE, logFile=NULL, type="INFO"){
 projectParams <- function(file){
     pp <- list(markers=NULL,
                data_dir=NULL,
+               data_file=NULL,
                cancer=NULL,
                sample=NULL,
                pad=0,
@@ -173,6 +176,8 @@ projectParams <- function(file){
         if(!is.null(pp$data_dir)){
             df <- file.path(pp$data_dir,dir(pp$data_dir)[grep("\\.rda$",dir(pp$data_dir))]) 
             pp$log <- projectFileName(pp$markers,df,pp$pad,"log")
+        } else if(!is.null(pp$data_file)){
+            pp$log <- gsub("\\.rda",".log",pp$data_file)
         } else {
             pp$log <- projectFileName(pp$markers,c("_"),pp$pad,"log")
         }

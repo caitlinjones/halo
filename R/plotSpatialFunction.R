@@ -80,7 +80,6 @@ plotCellTypeLocations <- function(dataFile, annotationsDir, cellTypesFile, pad=3
         ## bbFOV0 = gray solid  (fov max/min from Halo)
         ## bbData = gray dotted (fov minus padding)
         plotFOV1(bbData,sampleName,spot,bbPlot,bbFOV0)
-
         ## draw boundaries
         sTag <- paste(sampleName, paste0("Spot",spot,".annotations"),sep="_")
         aai <- grep(sTag,aFiles)
