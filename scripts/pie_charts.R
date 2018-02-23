@@ -12,12 +12,11 @@ suppressPackageStartupMessages(library("halo"))
 ###
 parser <- ArgumentParser()
 ## args are preferrably all in manifest
-parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?projectParams for details")
+parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?initializeProject for details")
 ## args required if manifest not given
 parser$add_argument("--cell_type_markers", type="character", default=NULL, help="comma-separated string of markers, for each of which a pie chart will be generated; e.g., 'CD3,CD4,CD8,CD20'")
 parser$add_argument("-c", "--counts_rda_file", type="character", help="*.rda file containing list of counts-related tables (output of counts.R)")
 ## optional args
-parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="print extra output")
 parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
 parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
 
@@ -29,13 +28,13 @@ pp <- NULL
 ## get all params from manifest if it exists, otherwise get them from command line
 print(args$manifest)
 if(!is.null(args$manifest)){
-    pp <- projectParams(args$manifest)
+    pp <- initializeProject(args$manifest,type="pie_charts")
 } else {
     pp <- args
 }
 
 if(!is.null(pp)){
-    logParams(pp)
+    logParams(pp,"Making pie charts")
 }
 
 if(is.null(pp$cell_type_markers)){
@@ -57,5 +56,5 @@ countsTbl <- allTbls[["Counts"]]
 markerNames <- trimws(unlist(strsplit(pp$cell_type_markers,",")))
 plotMarkerPercentages(countsTbl,markerNames,type="pie",other_threshold=as.numeric(pp$other_threshold),
                           exclude_sample_fov=pp$exclude_sample_fov, pdfFile=pp$pdf_pie_charts_by_sample,
-                          v=pp$verbose,logFile=pp$log,debug=args$debug,custom_colors=pp$custom_colors
+                          custom_colors=pp$custom_colors
                        )

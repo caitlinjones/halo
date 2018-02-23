@@ -4,20 +4,12 @@
 \alias{addMissingMarkers}
 \title{Add missing markers}
 \usage{
-addMissingMarkers(dat, m2, v = FALSE, logFile = NULL, debug = FALSE)
+addMissingMarkers(dat, m2)
 }
 \arguments{
 \item{dat}{tibble containing marker data}
 
 \item{m2}{list of individual markers in marker file}
-
-\item{v}{verbose - when set to TRUE, messages
-will be printed to screen as well as to file;
-DEFAULT = TRUE}
-
-\item{logFile}{file to write log messages to; DEFAULT=NULL}
-
-\item{debug}{print debug messages; DEFAULT=FALSE}
 }
 \value{
 a tibble with missing markers added, with "Positive" value

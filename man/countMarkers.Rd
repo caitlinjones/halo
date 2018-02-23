@@ -4,17 +4,15 @@
 \alias{countMarkers}
 \title{Generate a XLSX file of counts for all markers in a given file}
 \usage{
-countMarkers(markerFile, dataDir, lf = NULL, v = TRUE, pad = 0,
-  countsXLSXFile = NULL, countsRDAFile = NULL, writeXLSXfile = TRUE,
-  saveRDSfile = TRUE, runCounts = TRUE, runFracTotal = FALSE,
-  runMedians = TRUE, altBases = NULL, debug = FALSE)
+countMarkers(markerFile, dataDir, pad = 0, countsXLSXFile = NULL,
+  countsRDAFile = NULL, writeXLSXfile = TRUE, saveRDSfile = TRUE,
+  runCounts = TRUE, runFracTotal = FALSE, runMedians = TRUE,
+  altBases = NULL)
 }
 \arguments{
 \item{markerFile}{File containing list of marker names}
 
-\item{v}{verbose - when set to TRUE, messages
-will be printed to screen as well as to file;
-DEFAULT = TRUE}
+\item{dataDir}{directory of *.rda files containing Halo data}
 
 \item{pad}{amount that will be trimmed from FOV}
 
@@ -36,12 +34,6 @@ be automatically generated according to input file names and padding}
 \item{altBases}{vector of additional markers for which fractions 
 of counts should be calculated; one sheet will be generated
 for each element}
-
-\item{debug}{print debug messages; DEFAULT=FALSE}
-
-\item{dataFiles}{vector of data file(s)}
-
-\item{logFile}{file to write log messages to; DEFAULT=NULL}
 }
 \description{
 Given a marker file and a directory of *.rda files each containing Halo

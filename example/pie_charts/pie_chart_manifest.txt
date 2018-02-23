@@ -8,10 +8,10 @@
 cell_type_markers	CD3, CD4, CD8, FOXP3, CD20, CD56, CD68, CD163, CD14, MRC1, TGM2, SOX10
 
 ## specify name of counts *.rda file
-counts_rda_file	../counts/example_counts.rda	
+counts_rda_file	../counts/counts.rda	
 
 ## name of pie charts pdf file
-pdf_pie_charts_by_sample	example_pies_by_sample.pdf
+pdf_pie_charts_by_sample	pies_by_sample.pdf
 
 ## exclude single FOV(s) for particular sample(s); value is a string in the form
 ## [sampleName]:1+4+9,[sampleName2]:3,[sampleName5]:2+5
@@ -26,7 +26,7 @@ other_threshold	0.05
 custom_colors	TRUE
 
 ## log file; if NULL, name will be automatically generated
-log     pie_charts.log
+log	pie_charts.log
 
 ## print log messages to both stdout and to log
 verbose TRUE

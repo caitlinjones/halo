@@ -4,18 +4,10 @@
 \alias{cleanData}
 \title{Clean data table}
 \usage{
-cleanData(dat, v = TRUE, lf = NULL, debug = FALSE)
+cleanData(dat)
 }
 \arguments{
 \item{dat}{tibble containing marker data}
-
-\item{v}{verbose - when set to TRUE, messages
-will be printed to screen as well as to file;
-DEFAULT = TRUE}
-
-\item{lf}{log file}
-
-\item{debug}{print extra messages for debugging}
 }
 \value{
 modified tibble

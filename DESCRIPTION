@@ -4,15 +4,20 @@ Version: 0.0.0.9000
 Authors@R: c(person("Nicholas", "Socci", email = "socci@cbio.mskcc.org", role = c("aut")),
              person("Caitlin", "Jones", email = "byrne@cbio.mskcc.org", role = c("aut","cre"))
             )
-Description: Analyze and visualize Halo data
+Description: Analyze and visualize Halo data.
 Depends: R (>= 3.4.3),
+    contoureR,
     digest,
+    futile.logger,
     grid,
     gridExtra,
     kimisc,
     magrittr,
+    plotrix,
+    randtoolbox,
     raster,
     RColorBrewer,
+    rgeos,
     rJava,
     scales,
     SearchTrees,
@@ -21,7 +26,7 @@ Depends: R (>= 3.4.3),
     tools,
     xlsx,
     xlsxjars,
-    XML    
+    XML,
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

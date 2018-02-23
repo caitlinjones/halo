@@ -1,3 +1,61 @@
+DATE <- function() {gsub("-","",Sys.Date())}
+
+cc <- function(...) {paste(...,sep='_')}
+
+len <- function(x) {length(x)}
+
+tty.width <- function() {
+   con=pipe("~/bin/getTTYWidth")
+   dat=readLines(con,n=1)
+   close(con)
+   width=as.numeric(dat)
+   if(len(width)>0 && width>80) {
+     return(width)
+   } else {
+     return(80)
+   }
+}
+
+write.xls <- function(dd,filename,row.names=T,col.names=NA,na="NA",append=F) {
+  if (!is.data.frame(dd)) {
+    dd <- data.frame(dd,check.names=F)
+  }
+  if(!row.names) {
+    col.names=T
+  }
+  write.table(dd,file=filename,sep="\t",quote=FALSE,
+              col.names=col.names,row.names=row.names,na=na,append=append)
+}
+
+getSDIR<-function(){
+    args=commandArgs(trailing=F)
+    TAG="--file="
+    path_idx=grep(TAG,args)
+    SDIR=dirname(substr(args[path_idx],nchar(TAG)+1,nchar(args[path_idx])))
+    if(len(SDIR)==0) {
+        return(getwd())
+    } else {
+        return(SDIR)
+    }
+}
+
+
+
+
+#' Extract sample name from file name
+#' 
+#' Assuming sample name does not include underscores,
+#' return everything preceding the first underscore 
+#' 
+#' @param  filePath  file, which may or may not include full path
+getSampleFromFileName <- function(filePath){
+  gsub("_.*","",basename(filePath))
+}
+
+#' Generate string for selecting markers based on positive
+#' or negative value in data
+#' 
+#' 
 markerStringToPredicate<-function(ss) {
     mm=strsplit(ss,",")[[1]]
     mm_neg=gsub("-","",mm[grepl("-$",mm)])
@@ -33,9 +91,9 @@ markerStringToSelectRE<-function(ss){
 #' @param dat      input tibble/data.frame
 #' @param outDir   output directory
 #' @export
-splitByFov <- function(dat,out.dir){
+splitByFov <- function(dat,outDir){
     for(i in levels(as.factor(dat$SPOT))){
-        fname <- file.path(out.dir,paste0("FOV_",i))
+        fname <- file.path(outDir,paste0("FOV_",i))
         fov <- filter(dat, SPOT==i)
         saveRDS(fov, paste0(fname,".rda"))
     }
@@ -80,39 +138,21 @@ getAllCombos <- function(markers){
 #' @param action          action being carried out for the project (e.g., 
 #'                        "generating counts" or "making pie charts")
 #' @export
-logParams <- function(x,action=NULL){
-    #for(n in names(x)){ if(is.null(x[[n]])){ x[[n]] <- NA } }
+logParams <- function(project_params,action){
+    x <- project_params
     write(date(),file=x$log)
-    if(!is.null(action)){
-        write(paste0("\n",action," with params:\n"),file=x$log,append=TRUE)
-    }
+    write(paste0("\n",action," with params:\n"),file=x$log,append=TRUE)
     for(n in names(x)){
-        write(paste(n," = ",paste(x[[n]],collapse=",")), file=x$log, append=TRUE)
+        val <- paste(n," = ",paste(x[[n]],collapse=","))
+        if(is.list(x[[n]])){
+            val <- paste(names(x[[n]]), paste(x[[n]],collapse="+"), sep=":")
+        } else {
+            val <- paste(x[[n]],collapse=",")
+        }
+        val <- paste0(n, "\t", val)
+        write(val, file=x$log, append=TRUE)
     }
     write("\n#######################################################################\n",file=x$log,append=TRUE)
-}
-
-
-#' Log message to file and screen if specified
-#' 
-#' Print date() and log message to file, and if
-#' verbose is set to TRUE, also print to screen
-#' 
-#' @param msg        message to be printed
-#' @param v          verbose - when set to TRUE (default), messages
-#'                   will be printed to screen as well as to file
-#' @param logFile    file to write log messages to; DEFAULT=NULL
-#' @param type      message type (INFO, DEBUG, WARN); DEFAULT=INFO
-#' @export
-logMsg <- function(msg, v=TRUE, logFile=NULL, type="INFO"){
-    ## write log message to file, and if verbose, print
-    ## to stdout
-    if(v){
-        write(paste0("[",type,"]","\t",date(),"\t",msg),stdout())
-    }
-    if(!is.null(logFile)){
-        write(paste0("[",type,"]","\t",date(),"\t",msg), logFile, append=TRUE)
-    }
 }
 
 #' Build list of project parameters and values by reading
@@ -125,53 +165,103 @@ logMsg <- function(msg, v=TRUE, logFile=NULL, type="INFO"){
 #' TO DO: Add to description list of required and optional keys in file
 #' 
 #' @param    file    manifest file to be read
+#' @param    type    type of project being run ["counts"|"pie_charts"|"spatial_plots"];
+#'                   default="counts"
 #' @return   a list of all project parameters
 #' @export
-projectParams <- function(file){
-    pp <- list(markers=NULL,
-               data_dir=NULL,
-               data_file=NULL,
-               cancer=NULL,
-               sample=NULL,
-               pad=0,
-               fov=NULL,
-               log=NULL,
-               verbose=TRUE,
-               alt_bases=c(),
-               run_counts=TRUE,
-               run_frac_total=TRUE,
-               run_medians=TRUE,
-               pie_charts=FALSE,
-               counts_rda_file=NULL,
-               counts_xlsx_file=NULL,
-               cell_type_markers=NULL,
-               exclude_sample_fov=NULL,
-               exclude_sample=NULL,
-               exclude_fov=NULL,
-               exclude_marker=NULL,
-               write_xlsx_file=TRUE,
-               save_rds_file=TRUE,
-               custom_colors=FALSE,
-               pdf_pie_charts_by_sample=FALSE,
-               other_threshold=0,
-               draw_legend=TRUE,
-               cell_types_file=NULL,
-               annotations_dir=NULL,
-               debug=FALSE
-               )
+initializeProject <- function(file,type="counts"){
+    ## set defaults for all projects
+    pp <- list( log=NULL, 
+                debug=FALSE,
+                pad=30,
+                exclude_sample_fov=NULL,
+                exclude_sample=NULL,
+                exclude_fov=NULL,
+                exclude_marker=NULL )
 
-    man <- read.delim(file, sep="\t", comment.char="#", header=FALSE, stringsAsFactors=FALSE)[,c(1,2)]
-    for(x in 1:nrow(man)){
-        if(length(grep(",",man[x,2])) > 0){
-            pp[[man[x,1]]] <- trimws(unlist(strsplit(man[x,2],",")))
-        } else if(man[x,2] %in% c("TRUE","FALSE")){
-            pp[[man[x,1]]] <- ifelse(man[x,2] == "TRUE",TRUE,FALSE)
-        } else if(man[x,2] == "NULL"){
-            pp[[man[x,1]]] <- NULL
-        } else {
-            pp[[man[x,1]]] <- man[x,2]
-        }
+    countsPP <- list( markers=NULL,
+                      data_dir=NULL,
+                      fov=NULL,
+                      alt_bases=c(),
+                      run_counts=TRUE,
+                      run_frac_total=TRUE,
+                      run_medians=TRUE,
+                      counts_rda_file=NULL,
+                      counts_xlsx_file=NULL,
+                      write_xlsx_file=TRUE,   
+                      save_rds_file=TRUE )
+
+    piePP <- list( pie_charts=TRUE, 
+                   counts_rda_file=NULL,
+                   custom_colors=FALSE,
+                   pdf_pie_charts_by_sample=NULL,
+                   other_threshold=0,
+                   draw_legend=TRUE,
+                   cell_type_markers=NULL )
+
+    spatialPP <- list( data_file=NULL,
+                       cell_types_file=NULL,
+                       cell_type_name=NULL,
+                       annotations_dir=NULL,
+                       func_marker=NULL,
+                       write_csv_files=TRUE,
+                       sample_color=NULL,
+                       sample_colors_d=NULL,
+                       sort_by_marker="CD3",
+                       fov_bb=list(X0=1,X1=5363,Y0=-3343,Y1=1),
+                       plot_bb=list(X0=-499,X1=5363,Y0=-3343,Y1=500)
+                      )
+
+    if(type == "counts"){
+        pp <- c(pp, countsPP)
+    } else if(type == "pie_charts"){
+        pp <- c(pp, piePP)
+    } else if(type == "spatial_plots"){
+        pp <- c(pp, spatialPP)
+    } else {
+        flog.warn("Unrecognized project type '%s'. Not setting ANY defaults. Reading strictly from manifest.",type) 
     }
+
+    #if(is.yaml.file(file)){
+    #    pp <- read.config(file=file)
+    #} else {
+        ## process manifest
+        man <- read.delim(file, sep="\t", comment.char="#", header=FALSE, stringsAsFactors=FALSE)[,c(1,2)]
+        for(x in 1:nrow(man)){
+            if(man[x,2] %in% c("TRUE","FALSE")){
+                pp[[man[x,1]]] <- ifelse(man[x,2] == "TRUE",TRUE,FALSE)
+            } else if(man[x,2] == "NULL"){
+                pp[[man[x,1]]] <- NULL
+            } else if(length(grep(";;",man[x,2])) > 0){
+                tmp <- parseManifestList(man[x,2])
+                for(n in names(tmp)){
+                    if(length(grep(",",tmp[[n]])) == 0){
+                        tmp[[n]] <- type.convert(tmp[[n]],as.is=TRUE)
+                    }
+                }
+                pp[[man[x,1]]] <- tmp
+            } else if(length(grep(",",man[x,2])) > 0){
+                tmp <- trimws(unlist(strsplit(man[x,2],",")))
+                for(n in 1:length(tmp)){
+                    tmp[n] <- type.convert(tmp[n],as.is=TRUE)
+                }
+                pp[[man[x,1]]] <- trimws(unlist(strsplit(man[x,2],",")))
+            } else {
+                pp[[man[x,1]]] <- type.convert(man[x,2],as.is=TRUE)
+            }
+            ## add '#' to hex colors
+            if(length(grep("color",man[x,1],ignore.case=TRUE)) > 0){
+                if(is.list(pp[[man[x,1]]])){
+                    for(n in names(pp[[man[x,1]]])){
+                        pp[[man[x,1]]][[n]] <- paste0("#",pp[[man[x,1]]][[n]])
+                    }
+                } else {
+                    pp[[man[x,1]]] <- paste0("#",pp[[man[x,1]]])
+                }
+            }
+        }
+    #}
+    ## set log file 
     if(is.null(pp$log)){
         if(!is.null(pp$data_dir)){
             df <- file.path(pp$data_dir,dir(pp$data_dir)[grep("\\.rda$",dir(pp$data_dir))]) 
@@ -182,6 +272,12 @@ projectParams <- function(file){
             pp$log <- projectFileName(pp$markers,c("_"),pp$pad,"log")
         }
     }
+
+    ## set up logger
+    flog.threshold(DEBUG)
+    if(!pp$debug){ flog.threshold(INFO) }
+    flog.appender(appender.file(pp$log))
+
     return(pp)
 }
 
@@ -196,51 +292,62 @@ projectParams <- function(file){
 #'                              in all samples
 #' @param exclude_sample_marker a string of exclusions in the form: Sample1:CD3+CD4+TGM2,Sample2:CD20
 #' @param exclude_sample_fov    a string of exclusions in the form: Sample1:3+5+9,Sample2:1+16+22
-#' @param v                       verbose - when set to TRUE, messages will be printed to screen 
-#'                                as well as to file; DEFAULT = TRUE
-#' @param logFile               log file
-#' @param debug                 print debug messages; default=FALSE
 #' @export
 removeExclusions <- function(dat, exclude_sample=NULL, exclude_marker=NULL, exclude_sample_marker=NULL,
-                                  exclude_sample_fov=NULL, v=TRUE, logFile=NULL, debug=FALSE){
-    ## remove specific FOV from specific samples
+                                  exclude_sample_fov=NULL){
+   
+    ## remove specific FOV from specific samples  
     if(!is.null(exclude_sample_fov)){
-        exclude_sample_fov <- trimws(unlist(strsplit(exclude_sample_fov,",")))
-        for(ex in exclude_sample_fov){
-            samp <- unlist(strsplit(ex,":"))[1]
-            fovEx <- unlist(strsplit(ex,":"))[2]
-            fovEx <- unlist(strsplit(fovEx,"\\+"))
-            logMsg(paste0("Removing ",samp," FOV ",fovEx),v,logFile) 
-            dat <- filter(dat, !(Sample == samp & FOV %in% fovEx))
+
+        ## at some points the data has "SPOT" and at some is has "FOV"
+        if("SPOT" %in% names(dat)){
+            fovH <- "SPOT" 
+        } else if ("FOV" %in% names(dat)){
+            fovH <- "FOV"
+        } else if(is.null(exclude_sample_fov)){
+            flog.fatal("Data does not contain either SPOT or FOV in the header. Can not remove FOV exclusions")
+            stop("Data does not contain either SPOT or FOV in the header. Can not remove FOV exclusions")
         }
+
+        for(samp in names(exclude_sample_fov)){
+            fovEx <- exclude_sample_fov[[samp]]
+            flog.info("Removing samp %s, FOV %s",samp,fovEx)
+            dat <- filter(dat, !(Sample == samp & get(fovH) %in% fovEx))
+        }
+
     } else if(!is.null(exclude_sample_marker)){
-        exclude_sample_marker <- trimws(unlist(strsplit(exclude_sample_marker,",")))
-        warning("\n\nWARNING: REMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY 
+
+        warning("\n\nREMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY 
 MARKER COMBINATION WITH THAT/THOSE INDIVIDUAL MARKER(S)\n\n")
-        for(ex in exclude_sample_marker){
-            samp <- unlist(strsplit(ex,":"))[1]
-            mEx <- unlist(strsplit(ex,":"))[2]
-            mEx <- unlist(strsplit(mEx,"\\+"))
-            logMsg("REMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY MARKER COMBINATION
-                 WITH THAT/THOSE INDIVIDUAL MARKER(S)",v,logFile,"WARNING")
-            logMsg(paste0("Setting count(s) for ",samp," marker ",mEx," to NA"),v,logFile)
+        for(samp in names(exclude_sample_marker)){
+            mEx <- exclude_sample_marker[[samp]] 
+            flog.info("WARNING: REMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY MARKER COMBINATION
+                 WITH THAT/THOSE INDIVIDUAL MARKER(S)")
+            flog.info("Setting count(s) for %s marker %s to NA",samp,mEx)
             for(m in mEx){
                 dat[which(dat$Sample == samp),grep(paste0("(^|,)",m,"-*(,|$)"),names(dat))] <- NA
             }
         }
+
     } else if(!is.null(exclude_sample)){
-        logMsg(paste0("Removing sample(s) ",exclude_sample," from ALL markers"),v,logFile)
+
+        flog.info("Removing sample(s) %s from ALL markers",exclude_sample)
         exclude_sample <- trimws(unlist(strsplit(exclude_sample,",")))
         dat <- filter(dat, !Sample %in% exclude_sample)
+
     } else if(!is.null(exclude_marker)){
-        logMsg(paste0("Removing marker(s) ",exclude_marker," from ALL samples"),v,logFile)
+
+        flog.info("Removing marker(s) %s from ALL samples", exclude_marker)
         exclude_marker <- trimws(unlist(strsplit(exclude_marker,",")))
         for(em in exclude_marker){
-            dat <- select(dat, -grep(paste0("(^|,)",em,"-*(,|$)")))        
+            dat <- dplyr::select(dat, -grep(paste0("(^|,)",em,"-*(,|$)")))
         }
-    } 
+
+    }
     return(dat)
 }
+
+
 
 #' Generate name of output file for marker stats based on 
 #' input file names
@@ -256,7 +363,7 @@ MARKER COMBINATION WITH THAT/THOSE INDIVIDUAL MARKER(S)\n\n")
 #' @return  file name to be used for saving counts
 #' @export
 projectFileName <- function(markerFile,dataFiles,pad,type){
-    if(is.null(markerFile) || is.null(data.Files)){
+    if(is.null(markerFile) || is.null(dataFiles)){
         outFile <- paste0("halo_",format(Sys.Date(), format="%Y%m%d"))
     } else if(length(dataFiles)==1) {
         outFile <- paste("markerTable",
@@ -278,3 +385,28 @@ projectFileName <- function(markerFile,dataFiles,pad,type){
     return(outFile)
 }
 
+#' Convert manifest value string to list
+#'
+#' Lists can be written out in the manifest in the following form:
+#'   Name1:val1,Name2:val1+val2,Name3:val1+val2+val3
+#' This function parses this string to give the following list:
+#'   list(Name1=val1, Name2=c(val1,val2), Name3=c(val1,val2,val3))
+#'
+#' @param listString    string representing the list to be returned
+#' @return list form of the string given
+#' @export
+parseManifestList <- function(listString){
+    manList <- list()
+    listElements <- trimws(unlist(strsplit(listString,";;")))
+    for(le in listElements){
+        tmp <- trimws(unlist(strsplit(le,":")))
+        nm <- tmp[1]
+        val <- tmp[2]
+        if(nm %in% names(manList)){
+            flog.fatal("Element %s occurs in list string multiple times. Please correct manifest.",nm)
+            stop(paste0("Element ",nm, " occurs in list string multiple times. Please correct manifest."))
+        }
+        manList[[nm]] <- trimws(unlist(strsplit(val,"\\+")))
+    }
+    manList    
+}

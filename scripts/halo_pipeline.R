@@ -12,7 +12,7 @@ suppressPackageStartupMessages(library("halo"))
 ###
 parser <- ArgumentParser()
 ## args are preferrably all in manifest
-parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?projectParams for details")
+parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?initializeProject for details")
 ## args required if manifest not given
 parser$add_argument("--cell_type_markers", type="character", default=NULL, help="comma-separated string of markers, for each of which a pie chart will be generated; e.g., 'CD3,CD4,CD8,CD20'")
 parser$add_argument("-c", "--counts_rda_file", type="character", help="*.rda file containing list of counts-related tables (output of runMarkerCounts.R)")
@@ -37,7 +37,7 @@ pp <- NULL
 ## get all params from manifest if it exists, otherwise get them from command line
 print(args$manifest)
 if(!is.null(args$manifest)){
-    pp <- projectParams(args$manifest)
+    pp <- initializeProject(args$manifest,type="pipeline")
 } else {
     pp <- args
 }

@@ -6,7 +6,7 @@
 \usage{
 parseAnnotationXML(node, fovName = NULL, outFile = NULL, LineColor = "",
   Name = "", Visible = "", RegionType = "", HasEndcaps = 0,
-  NegativeROA = 0, v = FALSE, lf = NULL, debug = FALSE)
+  NegativeROA = 0)
 }
 \arguments{
 \item{node}{object of class XMLNode containing Halo annotations for one FOV}
@@ -26,16 +26,6 @@ parseAnnotationXML(node, fovName = NULL, outFile = NULL, LineColor = "",
 \item{HasEndcaps}{[???]}
 
 \item{NegativeROA}{[???]}
-
-\item{v}{verbose; print extra status messages; default=FALSE}
-
-\item{lf}{log file; default=NULL}
-
-\item{debug}{logical indicating whether to print debug statements}
-
-\item{regionNum}{current region number}
-
-\item{annotationNum}{current annotation number}
 }
 \value{
 nothing

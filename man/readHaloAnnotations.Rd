@@ -4,17 +4,10 @@
 \alias{readHaloAnnotations}
 \title{Parse boundary annotations of a single FOV in a single XML file}
 \usage{
-readHaloAnnotations(annoteFile, v = TRUE, logFile = NULL, debug = FALSE)
+readHaloAnnotations(annoteFile)
 }
 \arguments{
 \item{annoteFile}{XML file containing boundary annotations for a single FOV}
-
-\item{v}{verbose - when set to TRUE, messages will be printed to screen 
-as well as to file; DEFAULT = TRUE}
-
-\item{logFile}{log file}
-
-\item{debug}{print debug messages; default=FALSE}
 }
 \description{
 Parse XML file containing annotations for one FOV. Write tab-delimited file

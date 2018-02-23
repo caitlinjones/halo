@@ -4,3 +4,4 @@
 *.rda
 reinstall.R
 .nfs*
+results

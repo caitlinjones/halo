@@ -162,15 +162,9 @@ gridArrangeSharedLegend <- function(..., ncol = length(list(...)), nrow = 1, pos
 #' @param   exclude_sample_fov  a string of Sample FOVs to exclude from analysis in the form: 
 #'                                  'Sample1:2+4+3,Sample2:1,Sample3:2+4' 
 #' @param   pdfFile             output PDF file
-#' @param   v                   verbose - when set to TRUE, messages
-#'                              will be printed to screen as well as to file;
-#'                              DEFAULT = TRUE
-#' @param   logFile             file to write log messages to; DEFAULT=NULL
-#' @param   debug               print debug messages; DEFAULT=FALSE
 #' @export
 plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_threshold=0.05, 
-                                    exclude_sample_fov=NULL, pdfFile=NULL, v=TRUE, 
-                                    logFile=NULL, debug=FALSE,custom_colors=FALSE){
+                                    exclude_sample_fov=NULL, pdfFile=NULL, custom_colors=FALSE){ 
 
     ## set up colors
     markerColors <- c()
@@ -184,18 +178,17 @@ plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_th
 
     ## remove any exclusions
     if(!is.null(exclude_sample_fov)){
-        countsTable <- removeExclusions(countsTable, exclude_sample_fov, v=v, debug=debug)
+        countsTable <- removeExclusions(countsTable, exclude_sample_fov)
     }
 
     allPlots <- c()
     for(samp in unique(countsTable$Sample)){
-        if(debug){ logMsg(samp,v,logFile,"DEBUG") }
-
+        flog.debug(samp)
         pieTbl <- tibble()
         for(m in markerNames){
-            if(debug){ logMsg(m,v,logFile,"DEBUG") }
+            flog.debug(m)
             if(length(grep(m,names(countsTable))) == 0){
-                if(debug){ logMsg(paste0("skipping ",m),v,logFile,"DEBUG") }
+                flog.debug("skipping %s",m)
                 next
             }
 
@@ -203,11 +196,11 @@ plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_th
             ## remove marker combos in counts table that do not have this POSITIVE marker
             posMarkerCombos <- names(tmp)[!grepl(paste0(m,"-"),names(tmp))]
             if(length(posMarkerCombos) == 3){
-                logMsg(paste0("No ",m,"+ cells. Skipping."),v,logFile)
+                flog.debug("No %s cells. Skipping.",m)
                 next
             }
             ## get total marker counts and percentage of each marker for this sample
-            tmp <- select(tmp, posMarkerCombos) %>%
+            tmp <- dplyr::select(tmp, posMarkerCombos) %>%
                  filter(Sample == samp) %>%
                  gather(-(Sample:SLICE), key="Marker", value="Count") %>%
                  group_by(Marker) %>%
@@ -223,14 +216,14 @@ plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_th
             all <- filter(tmp, PercentAllSampleCells > other_threshold) %>%
                      bind_rows(other) %>%
                      arrange(desc(PercentAllSampleCells)) %>%
-                     select(-PercentAllSampleCells)  %>%
+                     dplyr::select(-PercentAllSampleCells)  %>%
                      spread(Marker,TotalMarkerCount)
             if(ncol(all) > 1){
                 all$Marker <- paste0(m," : ",rowSums(all[1,2:ncol(all)]))
             } else {
                 all$Marker <- paste0(m," : ",all$Other)
             } 
-            all <- select(all, Marker, everything())
+            all <- dplyr::select(all, Marker, everything())
             ## add data for this sample to the rest
             pieTbl <- bind_rows(pieTbl, all)
         }
@@ -243,7 +236,7 @@ plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_th
         ## remove negative markers from the combos for clarity 
         pie_data$Combo <- gsub(",[A-Z]{1,}\\d*-","",pie_data$Combo)
 
-        logMsg(paste0("Sample ", samp, " has ",length(unique(pie_data$Combo))," marker combinations"),v,logFile) 
+        flog.info("Sample %s has %s marker combinations",samp,length(unique(pie_data$Combo)))
 
         ## get colors for this sample to match any previous samples
         if(custom_colors){
@@ -259,45 +252,25 @@ plotMarkerPercentages <- function(countsTable, markerNames, type="bar", other_th
 
         ## TEMPORARY HACK until I can figure out how to print legend separately: 
         ## print pies without legend first in order to make sure they are bigger 
-        ## and readable; then print again with legend
-
-        if(length(unique(pie_data$Combo)) > 70){
-            ## plot WITHOUT legend and print
-            p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
+        ## and readable; then add legend if <= 70 combos 
+        p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
                    facet_wrap(~Marker,nrow = numRows) +
                    geom_bar(width=1,stat="identity",position="fill") +
                    labs(x = "", y = "", title = paste0(samp,"\n")) +
-                   scale_fill_manual(values = sampleColors) + 
-                   theme(axis.text.x = element_blank(), 
-         #            legend.text = element_text(size=6), 
-         #            legend.key.size = unit(0.3,"cm"),
-                     legend.position = "none",
+                   scale_fill_manual(values = sampleColors) +
+                   theme(axis.text.x = element_blank(),
+                   legend.position = "none",
                      strip.text.x = element_text(size=6)) +
                    guides(fill=guide_legend(title="",nrow=length(unique(pie_data$Combo))/4))
-            if(type == "pie"){
-                p <- p + coord_polar("y")
-            }
-        print(p)
+        if(length(unique(pie_data$Combo)) <= 70){
+            p <- p + theme(legend.text = element_text(size=6),
+                       legend.key.size = unit(0.3, "cm"),
+                       legend.position = "right")
+        }
+        if(type == "pie"){
+            p <- p + coord_polar("y")
         }
 
-        ## add legend and print
-    #    p <- ggplot(pie_data, aes(x = factor(1), y = Count, fill=Combo)) +
-    #           facet_wrap(~Marker,nrow = numRows) +
-    #           geom_bar(width=1,stat="identity",position="fill") +
-    #           labs(x = "", y = "", title = paste0(samp,"\n")) +
-    #           scale_fill_manual(values = sampleColors) +
-    #           theme(axis.text.x = element_blank(),
-    #                 legend.text = element_text(size=6),
-    #                 legend.key.size = unit(0.3,"cm"),
-    #                 legend.position = "right",
-    #                 strip.text.x = element_text(size=6)) +
-    #           guides(fill=guide_legend(title="",nrow=length(unique(pie_data$Combo))/4))
-    #    if(type == "pie"){
-    #        p <- p + coord_polar("y")
-    #    }
-        p <- p + theme(legend.text = element_text(size=6),
-                       legend.key.size = unit(0.3,"cm"),
-                       legend.position = "right")
         print(p)
 
     }
@@ -375,3 +348,100 @@ plotFOV1<-function(bbData,sampleName,spot,bbPlot,bbFOV0) {
 
 }
 
+
+#' Plot location of given cell types within one FOV
+#'
+#' Given a halo data *.rda file with XML annotations and a list of cell types, 
+#' plot the X and Y coordinates of those cells showing locations relative to
+#' each other and to tissue boundary
+#'
+#' @param dataFile         *.rda file containing ObjectAnalysisData
+#' @param annotationsDir   directory of *.annotations XML files from Halo for one sample
+#' @param cellTypesFile    text file containing a list of cell type markers, one on each line; 
+#'                         each cell type marker may consist of an indivdual marker or a comma-
+#                          separated list of markers (e.g., 'CD3,CD8,SOX10-')
+#' @param fovBB            a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
+#'                         for FOVs
+#' @param pad              amount to trim from each FOV
+#' @param plotBB           a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
+#'                         for whole plots
+#' @param boundaryColors   a list of hexadecimal color codes for Tum, Exc, and Epi boundaries 
+#' @param cellTypeColors   a list of hexadecimal color codes for each cell type in cellTypesFile
+#' @param pdfFile          name of output PDF file
+#' @return  nothing  
+#' @export
+plotCellTypeLocations <- function(dataFile, annotationsDir, cellTypesFile, fovBB, plotBB,
+                                  boundaryColors, cellTypeColors, pad=30, pdfFile=NULL){
+
+    bbFOV0 <- fovBB
+    bbPlot <- plotBB 
+    bbData <- bbFOV0
+    fovTag <- "ORIG"
+   
+    aFiles <- dir(annotationsDir)[grep("\\.annotations",dir(annotationsDir))]
+    epiFiles <- grep("epi",aFiles)
+    if(length(epiFiles) > 0){
+        aFiles <- aFiles[-epiFiles]
+    }
+    aFiles <- file.path(annotationsDir,aFiles)
+    aFileSpots <- as.numeric(gsub(".*_Spot|\\.annotations","",aFiles))
+
+    ## process rda file
+    flog.info("Reading data file %s",dataFile)
+    dd <- readRDS(dataFile)
+    sampleName <- getSampleFromFileName(dataFile)
+
+    flog.debug("Getting FOVs")
+    spots <- dd %>% dplyr::select(SPOT) %>% distinct(SPOT) %>% arrange(SPOT) %>% pull(SPOT) 
+
+    if(pad > 0){
+        fovTag <- paste0("clip",pad)
+        pdfFile <- gsub("\\.pdf",paste0("_",fovTag,".pdf"),pdfFile)
+        bbData <- padBoundingBox(bbFOV0,-pad/pixel2um)
+    }
+
+    cellTypes <- scan(cellTypesFile,"")
+
+    pdf(pdfFile,width=11,height=8.5)
+    for(i in seq(spots)){
+        spot = spots[i]
+        flog.debug("Getting data for spot %s",spot)
+        ds=dd %>%
+            filter(SPOT==spot & ValueType=="Positive") %>%
+            mutate(X=(XMax+XMin)/2,Y=-(YMax+YMin)/2) %>%
+            dplyr::select(Sample,SPOT,UUID,X,Y,Marker,Value) %>%
+            spread(Marker,Value)
+        flog.debug("  plotting...")
+        ## bbPlot = black solid (entire plot)
+        ## bbFOV0 = gray solid  (fov max/min from Halo)
+        ## bbData = gray dotted (fov minus padding)
+        plotFOV1(bbData,sampleName,spot,bbPlot,bbFOV0)
+        ## draw boundaries
+        sTag <- paste(sampleName, paste0("Spot",spot,".annotations"),sep="_")
+        aai <- grep(sTag,aFiles)
+        if(len(aai)>0){
+            flog.debug("Found boundary annotation file %s. Adding boundaries..",aFiles[aai])
+            aFile=aFiles[aai]
+            boundaries=readHaloAnnotations(aFile)
+            boundaries %>%
+                walk(function(x){
+                    color=ifelse(x$RegionCode=="Tum",boundaryColors[["Tum"]],boundaryColors[["Exc"]]);
+                    with(x,lines(X,Y,col=color,lwd=2))
+                    }
+                )
+        }
+
+        ## draw locations of all cells
+        with(ds,points(X,Y,col="#EEEEEE",pch=4,cex=.35))
+
+        ## draw locations of cells matching cell types in file
+        for(ci in seq(cellTypes)) {
+            ds %>%
+                filter_(markerStringToPredicate(cellTypes[ci])) %$%
+                points(X,Y,pch=16,col=cellTypeColors[[cellTypes[ci]]],cex=.8)
+        }
+        legend(bbPlot$X0,bbPlot$Y1,c("DAPI",cellTypes),col=c(8,unlist(cellTypeColors)[cellTypes]),pch=c(4,rep(16,len(cellTypes))),bg="#FFFFFF")
+
+    }
+    dev.off()
+}

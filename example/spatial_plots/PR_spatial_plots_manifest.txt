@@ -1,0 +1,25 @@
+# example spatial plot manifest 
+# 
+#
+#######
+#
+## file containing list of cell types to be plotted
+cell_types_file	markerSeriesB.txt	
+
+## *.rda file containing Halo data
+data_file	/home/byrne/halo/data/melanoma/objectAnalysisData/PR_ObjectAnalysisData_MegaTableV2.rda
+
+## directory of *.annotations XML files containing Halo annotations
+annotations_dir	/home/byrne/halo/nicks_spatial/inputs/BoundryAnnotationFiles/PR_boundaryCoordinates
+
+## log file; if NULL, name will be automatically generated
+log	PR_markerSeriesB_spatial_plots.log	
+
+## print log messages to both stdout and to log
+verbose	TRUE
+
+## print debug messages
+debug	TRUE
+
+## pad FOV
+pad	30

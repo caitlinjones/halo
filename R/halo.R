@@ -1,10 +1,12 @@
+pixel2um <- 0.293
+
 #' Load data from *.rda file
 #'
 #' Load data for one subsample from one cancer type, and optionally
 #' one FOV. Default is to load ALL FOV for a subsample 
 #' 
 #' @param    cancerType    cancer type (default: melanoma)
-#' @param    subSample     subsample name, as it is called in *.rda file
+#' @param    sample        sample name, as it is called in *.rda file
 #' @param    FOV (SPOT)    integer; FOV/SPOT number (default: NULL)
 #' @return   tibble saved in *.rda file
 #' @export
@@ -23,21 +25,15 @@ loadHalo <- function(cancerType, sample, FOV=NULL){
 #' 
 #' @param dat       tibble containing marker data
 #' @param m2        list of individual markers in marker file
-#' @param v         verbose - when set to TRUE, messages
-#'                  will be printed to screen as well as to file;
-#'                  DEFAULT = TRUE
-#' @param logFile   file to write log messages to; DEFAULT=NULL
 #' @return  a tibble with extra markers filtered out
 #' @export
-removeExtraMarkers <- function(dat, m2, v=FALSE, logFile=NULL){
+removeExtraMarkers <- function(dat, m2){
     datMarkers <- unique(dat$MarkerName)
     if(length(setdiff(datMarkers,m2)) > 0){
-        msg <- paste0("    WARNING: Removing markers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
-        if(!is.null(logFile)){
-            logMsg(msg,v=FALSE,logFile)
-        } else {
-            warning("Removing arkers in data but NOT in markerFile: ",paste(setdiff(datMarkers,m2),collapse=", "))
-        }
+        flog.warn(paste0("Removing arkers in data but NOT in markerFile: ",
+                          paste(setdiff(datMarkers,m2),collapse=", ")))
+        warning(paste0("Removing arkers in data but NOT in markerFile: ",
+                          paste(setdiff(datMarkers,m2),collapse=", ")))
         ## remove markers in data but not in marker file
         finalMarkers <- datMarkers[which(datMarkers %in% m2)]
         dat <- filter(dat, MarkerName %in% finalMarkers)
@@ -52,22 +48,15 @@ removeExtraMarkers <- function(dat, m2, v=FALSE, logFile=NULL){
 #'
 #' @param dat       tibble containing marker data
 #' @param m2        list of individual markers in marker file
-#' @param v         verbose - when set to TRUE, messages
-#'                  will be printed to screen as well as to file;
-#'                  DEFAULT = TRUE
-#' @param logFile   file to write log messages to; DEFAULT=NULL
-#' @param debug     print debug messages; DEFAULT=FALSE
 #' @return  a tibble with missing markers added, with "Positive" value
 #'          set to NA
-addMissingMarkers <- function(dat, m2, v=FALSE, logFile=NULL, debug=FALSE){
+addMissingMarkers <- function(dat, m2){
     datMarkers <- unique(dat$MarkerName)
     if(length(setdiff(m2, datMarkers)) > 0){
-        msg <- paste0("    WARNING: Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
-        if(!is.null(logFile)){
-            logMsg(msg,v=FALSE,logFile)
-        } else {
-            warning("Markers in markerFile but NOT in data: ",paste(setdiff(m2,datMarkers),collapse=", "))
-        }
+        flog.warn(paste0("Markers in markerFile but NOT in data: ",
+                   paste(setdiff(m2,datMarkers),collapse=", ")))
+        warning(paste0("Markers in markerFile but NOT in data: ",
+                   paste(setdiff(m2,datMarkers),collapse=", ")))
         ## add markers in marker file but not data
         ## if there is no pos or neg marker, set Value = NA; 
         ## otherwise, set to zero
@@ -76,26 +65,18 @@ addMissingMarkers <- function(dat, m2, v=FALSE, logFile=NULL, debug=FALSE){
             tmp$MarkerName <- m
             if(length(grep("-",m))==0){
                 if(paste0(m,"-") %in% datMarkers){
-                    if(debug){
-                        logMsg(paste0(m," is negative for ALL cells in ALL FOV. Setting counts to zero."),v,logFile)
-                    }
+                    flog.debug("%s is negative for ALL cells in ALL FOV. Setting counts to zero.",m)
                     tmp$Value <- 0
                 } else{
-                    if(debug){
-                        logMsg(paste0(m," is MISSING from data. Setting counts to NA."),v,logFile)
-                    }
+                    flog.debug("%s is MISSING from data. Setting counts to NA.",m)
                     tmp$Value <- NA
                 }
             } else {
                 if(gsub("-","",m) %in% datMarkers){
-                    if(debug){
-                        logMsg(paste0(m," is negative for ALL cells in ALL FOV. Setting counts to zero."),v,logFile)
-                    }
+                    flog.debug("%s is negative for ALL cells in ALL FOV. Setting counts to zero.",m)
                     tmp$Value <- 0
                 } else{
-                    if(debug){
-                        logMsg(paste0(m," is MISSING from data. Setting counts to NA."),v,logFile)
-                    }
+                    flog.debug("%s is MISSING from data. Setting counts to NA.",m)
                     tmp$Value <- NA
                 }
             }
@@ -111,15 +92,11 @@ addMissingMarkers <- function(dat, m2, v=FALSE, logFile=NULL, debug=FALSE){
 #' If the list is longer than one element, print error message and EXIT 
 #'
 #' @param uniqFOVs    vector containing list of unique FOVs in dataset
-#' @param v           verbose - when set to TRUE, messages
-#'                    will be printed to screen as well as to file;
-#'                    DEFAULT = TRUE
-#' @param logFile     file to write log messages to; DEFAULT=NULL
 #' @export
-validateSingleFOVFile <- function(uniqFOVs, v=FALSE, logFile=NULL){
+validateSingleFOVFile <- function(uniqFOVs){
     ## ensure that file contains only ONE FOV
     if(length(uniqFOVs) > 1){
-        logMsg("ERROR: Multiple FOVs found in file.",v,logFile) 
+        flog.fatal("Multiple FOVs found in this file.")
         stop("MULTIPLE FOVs found in file. Please split file by FOV and rerun")
     }
 }
@@ -226,14 +203,9 @@ cleanMarkers <- function(markerFile,altBases=NULL){
 #' Alter column names, ensure correct data types for certain columns
 #' 
 #' @param  dat    tibble containing marker data
-#' @param  debug  print extra messages for debugging
-#' @param  v      verbose - when set to TRUE, messages
-#'                will be printed to screen as well as to file;
-#'                DEFAULT = TRUE
-#' @param lf      log file
 #' @return   modified tibble
-cleanData <- function(dat,v=TRUE,lf=NULL,debug=FALSE){
-    if(debug){ logMsg("changing SPOT to FOV and SubSample to Sample",v,lf,"DEBUG") }
+cleanData <- function(dat){
+    flog.debug("changing SPOT to FOV and SubSample to Sample")
     dat <- rename(dat, FOV = SPOT)
     dat$FOV <- as.integer(dat$FOV)
     dat$SLICE <- as.integer(dat$SLICE)
@@ -310,12 +282,8 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
 #' will exclude the DAPI+ to avoid redundancy. 
 #'
 #' @param markerFile       File containing list of marker names
-#' @param dataFiles        vector of data file(s)
+#' @param dataDir          directory of *.rda files containing Halo data 
 #' @param pad              amount that will be trimmed from FOV
-#' @param v                verbose - when set to TRUE, messages
-#'                         will be printed to screen as well as to file;
-#'                         DEFAULT = TRUE
-#' @param logFile          file to write log messages to; DEFAULT=NULL
 #' @param countsXLSXFile   name of XLSX file to write to; if NULL, name will
 #'                         be automatically generated according to input file names and padding
 #' @param countsRDAFile    name of RDA file to write to; if NULL, RDA file will NOT be written
@@ -327,18 +295,17 @@ getSheetOrder <- function(runCounts=TRUE, runMedians=TRUE, runFracTotal=FALSE, a
 #' @param altBases         vector of additional markers for which fractions 
 #'                         of counts should be calculated; one sheet will be generated
 #'                         for each element 
-#' @param debug            print debug messages; DEFAULT=FALSE
 #' @export
-countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSXFile=NULL,
+countMarkers <- function(markerFile, dataDir, pad=0, countsXLSXFile=NULL,
                countsRDAFile=NULL, writeXLSXfile=TRUE, saveRDSfile=TRUE, runCounts=TRUE, 
-               runFracTotal=FALSE, runMedians=TRUE, altBases=NULL,debug=FALSE){
+               runFracTotal=FALSE, runMedians=TRUE, altBases=NULL){
 
-    if(debug){ logMsg("Reading marker file",v,lf,"DEBUG") }
+    flog.debug("Reading marker file")
     markerNames <- cleanMarkers(markerFile,altBases)
     dataFiles <- file.path(dataDir,dir(dataDir)[grep("\\.rda$",dir(dataDir))])
 
-    logMsg(paste0("Generating counts for ", basename(markerFile), " and ", length(dataFiles) ,
-                  " files in ", dataDir),v,lf) 
+    flog.info("Generating counts for %s and %s files in %s", basename(markerFile), 
+                  length(dataFiles), dataDir)
 
     if(writeXLSXfile & is.null(countsXLSXFile)){ 
         countsXLSXFile <- projectFileName(markerFile,dataFiles,pad,"xlsx") 
@@ -350,7 +317,7 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
     ###              
     ## initialize tables that will be written to separate xlsx sheets
     ###              
-    if(debug){ logMsg("Initializing tables",v,lf,"DEBUG") }
+    flog.debug("Initializing tables")
     allTbls <- list()
     sheetOrder <- getSheetOrder(runCounts=runCounts, runFracTotal=runFracTotal, 
                                 runMedians=runMedians, altBases=altBases, debug=debug)
@@ -365,50 +332,49 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
         sampTbls <- list()
         for(tableName in sheetOrder){ sampTbls[[tableName]] <- tibble() }
 
-        logMsg(file_path_sans_ext(basename(f)),v,lf)
-        if(debug){ logMsg("Reading rda file",v,lf,"DEBUG") }
+        flog.info(file_path_sans_ext(basename(f)))
+        flog.debug("Reading rda file")
         dat <- readRDS(f)
 
-        logMsg(paste0("    Trimming ", pad, " pixels from image"),v,lf)
+        flog.info("Trimming %s pixels from FOV",pad)
         dat <- trimImage(dat,as.numeric(pad))
 
-        dat <- cleanData(dat,v=v,lf=lf,debug=debug)
+        dat <- cleanData(dat)
         samp <- unique(dat$Sample)
-        if(debug){ logMsg(paste0("there is/are ", length(samp), " sample(s) in this file: ", samp),v,lf,"DEBUG") }
-
+        flog.debug("there is/are %s sample(s) in this file: ",samp)
         ## add new column containing marker names that alone will
         ## indicate whether a cell is positive or negative for that
         ## marker (e.g., SOX10 with Value == 0 becomes SOX10-)
-        if(debug){ logMsg("adding negative marker columns and adjusting pos/neg values",v,lf,"DEBUG") }
+        flog.debug("adding negative marker columns and adjusting pos/neg values")
         dat <- dat %>%
             filter(ValueType == "Positive") %>%
-            select(UUID,Sample,FOV,SLICE,Marker,Value) %>%
+            dplyr::select(UUID,Sample,FOV,SLICE,Marker,Value) %>%
             mutate(Sign = ifelse(Value == 1, "", "-")) %>%
             unite(MarkerName, Marker, Sign, sep="")
 
         ## change all values to 1, as any nonsensical relationships
         ## will be changed to NA and then 0 by spread(); 1 will indicate positive, so if
         ## a marker with "-" has val 1, the pos marker is negative
-        if(debug){ logMsg("changing all values to 1 and spreading table, leaving NAs for nonsensical relationships",v,lf,"DEBUG") }
+        flog.debug("changing all values to 1 and spreading table, leaving NAs for nonsensical relationships")
         dat$Value <- 1
 
         ## sync markers in marker file and data
-        dat <- removeExtraMarkers(dat, unique(unlist(strsplit(markerNames, ","))), v=v, logFile=lf)
-        dat <- addMissingMarkers(dat, unique(unlist(strsplit(markerNames, ","))), v=v, logFile=lf, debug=debug) 
+        dat <- removeExtraMarkers(dat, unique(unlist(strsplit(markerNames, ","))))
+        dat <- addMissingMarkers(dat, unique(unlist(strsplit(markerNames, ","))))
 
         ###              
         ## process counts for each marker
         ###
-        logMsg("    Processing counts for each marker",v,lf)              
+        flog.info("    Processing counts for each marker")
         for(i in 1:length(markerNames)){
             x <- markerNames[i]
-            logMsg(paste0("      [",i,"] ",x),v,lf)
+            flog.debug(paste0("    [",i,"] ",x))
             indivMarkers <- unlist(strsplit(x,","))
 
             tmp <- filter(dat, MarkerName %in% indivMarkers) %>%
                    spread(MarkerName, Value, drop = FALSE, fill = 0)
             tmp[[x]] <- ifelse(rowSums(tmp[,indivMarkers]) == length(indivMarkers),1,0)
-            tmp <- select(tmp, Sample, FOV, SLICE, x) %>%
+            tmp <- dplyr::select(tmp, Sample, FOV, SLICE, x) %>%
                      gather(x, key=MarkerNames, value="tmp") %>%
                      group_by(Sample, FOV, SLICE, MarkerNames) %>%
                      summarize(Counts = sum(tmp)) %>%
@@ -440,7 +406,7 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
             for(ab in altBases){
                 m <- ifelse(ab == "DAPI", ab, paste0(ab,",DAPI")) 
                 tName <- paste0("Frac.",m)
-                if(debug){ logMsg(paste0("getting fraction of cells based on total ",ab," cells"),v,lf,"DEBUG") }
+                flog.debug(paste0("getting fraction of cells based on total ",ab," cells"))
                 vals <- sampTbls[["Counts"]][[m]]
                 tmp <- sampTbls[["Counts"]]
                 tmp[,4:ncol(tmp)] <- tmp[,4:ncol(tmp)]/as.numeric(vals)
@@ -487,4 +453,20 @@ countMarkers <- function(markerFile, dataDir, lf=NULL, v=TRUE, pad=0, countsXLSX
     } 
     return(allTbls) 
    
+}
+
+computeMultiMarkerTable<-function(mt,markerCols) {
+
+    for(ii in which(grepl(",",markerCols))) {
+        #cat(ii,markerCols[ii],"\n")
+        markers=strsplit(markerCols[ii],",")[[1]]
+        mt[[markerCols[ii]]] = mt %>%
+            dplyr::select(one_of(markers)) %>%
+            mutate(XX=ifelse(rowSums(.)==len(markers),1,0)) %$%
+            as.vector(XX)
+    }
+
+    ## Remove any DAPI negative cells
+    ##mt %<>% filter(DAPI==1)
+    mt
 }

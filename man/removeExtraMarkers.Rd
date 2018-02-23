@@ -4,18 +4,12 @@
 \alias{removeExtraMarkers}
 \title{Remove from data markers that are not in marker file}
 \usage{
-removeExtraMarkers(dat, m2, v = FALSE, logFile = NULL)
+removeExtraMarkers(dat, m2)
 }
 \arguments{
 \item{dat}{tibble containing marker data}
 
 \item{m2}{list of individual markers in marker file}
-
-\item{v}{verbose - when set to TRUE, messages
-will be printed to screen as well as to file;
-DEFAULT = TRUE}
-
-\item{logFile}{file to write log messages to; DEFAULT=NULL}
 }
 \value{
 a tibble with extra markers filtered out

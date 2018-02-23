@@ -4,7 +4,7 @@
 \alias{splitByFov}
 \title{Split data in *.rda file by FOV (SPOT)}
 \usage{
-splitByFov(dat, out.dir)
+splitByFov(dat, outDir)
 }
 \arguments{
 \item{dat}{input tibble/data.frame}

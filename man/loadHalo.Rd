@@ -9,9 +9,9 @@ loadHalo(cancerType, sample, FOV = NULL)
 \arguments{
 \item{cancerType}{cancer type (default: melanoma)}
 
-\item{FOV}{(SPOT)    integer; FOV/SPOT number (default: NULL)}
+\item{sample}{sample name, as it is called in *.rda file}
 
-\item{subSample}{subsample name, as it is called in *.rda file}
+\item{FOV}{(SPOT)    integer; FOV/SPOT number (default: NULL)}
 }
 \value{
 tibble saved in *.rda file

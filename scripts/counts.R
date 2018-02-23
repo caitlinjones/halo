@@ -13,7 +13,7 @@ suppressPackageStartupMessages(library("halo"))
 parser <- ArgumentParser()
 
 ## args are preferrably all in manifest
-parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?projectParams for details")
+parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?initializeProject for details")
 
 ## args required if manifest not given
 parser$add_argument("-mf", "--markers", type="character", help="comma separated file containing marker information")
@@ -26,7 +26,6 @@ parser$add_argument("--run_medians", action="store_true", help="add sheet to cou
 parser$add_argument("--alt_bases", default=NULL, help="comma separated string of markers to use as alternate 'baselines'")
 parser$add_argument("--counts_xlsx_file", type="character", help="*.xlsx file of count")
 
-parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="print extra output")
 parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
 parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
 
@@ -38,13 +37,13 @@ pp <- NULL
 ## get all params from manifest if it exists, otherwise get them from command line
 print(args$manifest)
 if(!is.null(args$manifest)){
-    pp <- projectParams(args$manifest)
+    pp <- initializeProject(args$manifest,type="counts")
 } else {
     pp <- args
 }
 
 if(!is.null(pp)){
-    logParams(pp)
+    logParams(pp,"Generating counts")
 }
 
 
@@ -52,10 +51,9 @@ if(!is.null(pp)){
 if(is.null(pp$markers) || is.null(pp$data_dir)){
     stop("The following args need to be set in order to run counts: 'markers' and 'data_dir'")
 }
-allTbls <- countMarkers(pp$markers, pp$data_dir, lf=pp$log, v=pp$verbose, pad=pp$pad,
-                     countsXLSXFile=pp$counts_xlsx_file,
-                     countsRDAFile=pp$counts_rda_file, runCounts=pp$run_counts,
-                     runFracTotal=pp$run_frac_total, runMedians=pp$run_medians,
-                     altBases=pp$alt_bases, debug=args$debug,
-                     saveRDSfile=pp$save_rds_file, writeXLSXfile=pp$write_xlsx_file)
+allTbls <- countMarkers(pp$markers, pp$data_dir, pad=pp$pad, altBases=pp$alt_bases,
+                     countsXLSXFile=pp$counts_xlsx_file, countsRDAFile=pp$counts_rda_file, 
+                     runCounts=pp$run_counts, runFracTotal=pp$run_frac_total,
+                     runMedians=pp$run_medians, saveRDSfile=pp$save_rds_file, 
+                     writeXLSXfile=pp$write_xlsx_file)
 

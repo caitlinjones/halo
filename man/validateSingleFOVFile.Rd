@@ -4,16 +4,10 @@
 \alias{validateSingleFOVFile}
 \title{Make sure list of unique FOVs contains only one element}
 \usage{
-validateSingleFOVFile(uniqFOVs, v = FALSE, logFile = NULL)
+validateSingleFOVFile(uniqFOVs)
 }
 \arguments{
 \item{uniqFOVs}{vector containing list of unique FOVs in dataset}
-
-\item{v}{verbose - when set to TRUE, messages
-will be printed to screen as well as to file;
-DEFAULT = TRUE}
-
-\item{logFile}{file to write log messages to; DEFAULT=NULL}
 }
 \description{
 If the list is longer than one element, print error message and EXIT
