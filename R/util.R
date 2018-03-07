@@ -143,9 +143,15 @@ logParams <- function(project_params,action){
     write(date(),file=x$log)
     write(paste0("\n",action," with params:\n"),file=x$log,append=TRUE)
     for(n in names(x)){
-        val <- paste(n," = ",paste(x[[n]],collapse=","))
+        #val <- paste(n," = ",paste(x[[n]],collapse=","))
         if(is.list(x[[n]])){
-            val <- paste(names(x[[n]]), paste(x[[n]],collapse="+"), sep=":")
+            #val <- paste(names(x[[n]]), paste(x[[n]],collapse="+"), sep=":")
+            tmp <- x[[n]]
+            val <- c()
+            for(v in names(tmp)){
+                val <- c(val, paste(v,paste(tmp[[v]],collapse="+"),sep=":"))
+            }
+            val <- paste(val, collapse=";;")
         } else {
             val <- paste(x[[n]],collapse=",")
         }
@@ -222,10 +228,15 @@ initializeProject <- function(file,type="counts"){
         flog.warn("Unrecognized project type '%s'. Not setting ANY defaults. Reading strictly from manifest.",type) 
     }
 
-    #if(is.yaml.file(file)){
-    #    pp <- read.config(file=file)
-    #} else {
-        ## process manifest
+    ## process manifest
+    pp <- tryCatch({
+        pp <- read_yaml(file)
+        flog.debug("Read YAML file. WARNING: No defaults were set. Relying completely on manifest file for ALL settings.")
+        pp
+        #warning("No defaults were set. Relying completely on manifest file for ALL settings.")
+      }, error = function(e){
+        flog.debug("File not in YAML format. Reading manifest in tab-delimited format") 
+        #print(e)
         man <- read.delim(file, sep="\t", comment.char="#", header=FALSE, stringsAsFactors=FALSE)[,c(1,2)]
         for(x in 1:nrow(man)){
             if(man[x,2] %in% c("TRUE","FALSE")){
@@ -260,7 +271,11 @@ initializeProject <- function(file,type="counts"){
                 }
             }
         }
-    #}
+        pp
+    }, finally = {
+        pp
+    })
+
     ## set log file 
     if(is.null(pp$log)){
         if(!is.null(pp$data_dir)){
