@@ -28,8 +28,10 @@ generateSobolGrid<-function(nGrid,bbG) {
 #' @param interfaceBins         vector of distances (integers) that define each band; default = (-20:20)*10 
 #' @param nGrid                 number of random points to use for area calculations; default=100
 #' @param maxSeg                maximum segments to divide long boundary segments into; default=1000
-computeBandAreasMC <- function(tumorBoundariesList,bbData,interfaceBins,nGrid=100,maxSeg=1000,
-    exclusionB) {
+#' @param exclusionsB           a list where each element is a tibble containing exclusion boundaries
+#'                              returned from readHaloAnnotations()
+computeBandAreasMC <- function(tumorBoundariesList,bbData,interfaceBins,nGrid=100,
+                               maxSeg=1000,exclusionB) {
 
     ## generate random points all across the plot
     flog.debug("generating sobol grid")
@@ -73,27 +75,22 @@ computeBandAreasMC <- function(tumorBoundariesList,bbData,interfaceBins,nGrid=10
 #' between X and Y microns of the tumor boundary [ TO DO: REWORD THIS? ]
 #' **Do this for 10^maxG and for 10^maxG-1
 #' 
-#' @param aFile          Halo boundary annotation file in XML format
+#' @param allBoundaries  halo boundaries after removal of contained boundaries (list returned by 
+#'                       cleanBoundaries())
 #' @param maxG           maximum factor of 10 to use for generating random points on grid [ REWORD??? ]
 #' @param bbData         a list containing X0,X1,Y0,Y1 representing the boundary
 #'                       of the trimmed FOV
 #' @param interfaceBins  vector of distances (integers) that define each band; default = (-20:20)*10
 #' @return a dataframe with a row for each interface bin and a column for each area calculation (one for 
 #'         10^maxG and one for 10^maxG-1)
-calculateBandAreas <- function(aFile,maxG=5,bbData,interfaceBins) {
+calculateBandAreas <- function(allBoundaries,maxG=5,bbData,interfaceBins) {
 
     if(is.null(interfaceBins)){
         interfaceBins <- (-20:20)*10
     }
 
-    flog.debug("getting halo boundaries")
-    boundaries <- readHaloAnnotations(aFile)
-
-    flog.debug("removing contained boundaries")
-    ## remove boundaries that are completely contained in another one
-    sepB <- removeContainedBoundaries(boundaries)
-    tumB <- sepB$tumB
-    excB <- sepB$excB
+    tumB <- allBoundaries$tumB
+    excB <- allBoundaries$excB
 
     bandArea <- list()
     for(nGrid in 10^((maxG-1):maxG)) {
@@ -116,6 +113,8 @@ calculateBandAreas <- function(aFile,maxG=5,bbData,interfaceBins) {
 #'
 #' Given an annotation file and halo infiltration data, compute tibble of Sample, FOV, 
 #' Halo Version, MaxG, Band, Area, Halo
+#'
+#' *NOTE: formerly computeBoundaryBinsLattice
 #' 
 #' @param aFile                Halo boundary annotation file in XML format
 #' @param sample               sample name
@@ -129,7 +128,7 @@ calculateBandAreas <- function(aFile,maxG=5,bbData,interfaceBins) {
 #'                             of the trimmed FOV
 #' @param interfaceBins        vector of distances (integers) that define each band; default = (-20:20)*10 
 #' @return tibble 
-computeBoundaryBinsLattice <- function(aFile, sample, fov, maxG, haloInfiltrationDir, outDir=NULL,
+getAreaPerBand <- function(allBoundaries, sample, fov, maxG, haloInfiltrationDir, outDir=NULL,
                                        bbData=NULL, writeCSVfiles=FALSE, interfaceBins=NULL){ 
 
     if(is.null(interfaceBins)){
@@ -139,23 +138,25 @@ computeBoundaryBinsLattice <- function(aFile, sample, fov, maxG, haloInfiltratio
     SAMPLE <- sample
     sampleSPOT <- as.numeric(fov)
     flog.debug("%s SPOT %s",SAMPLE,sampleSPOT)
-    aa=calculateBandAreas(aFile,maxG=maxG,bbData,interfaceBins)
+    aa=calculateBandAreas(allBoundaries,maxG=maxG,bbData,interfaceBins)
 
     flog.debug("reading infiltration data file %s", paste0(SAMPLE,sampleSPOT,"_infiltration_ex_data.csv"))
+    sink("/dev/null")
     mp <- read_csv(file.path(haloInfiltrationDir,paste0(SAMPLE,sampleSPOT,"_infiltration_ex_data.csv")))
+    sink()
     imp <- grep("Band",colnames(mp))
     a2 <- data.frame(aa[,ncol(aa),drop=F],AreaMP=as.numeric(mp[,imp]))
 
-    rmsConvergence1 <- NA
-    if(ncol(aa)>2){
-        rmsConvergence1 <- sqrt(mean((aa[,ncol(aa)-1]-aa[,ncol(aa)-2])^2))
-    }
-    rmsConvergence <- sqrt(mean((aa[,ncol(aa)]-aa[,ncol(aa)-1])^2))
-    rmsHalo <- sqrt(mean((a2[,ncol(a2)]-a2[,ncol(a2)-1])^2))
+    #rmsConvergence1 <- NA
+    #if(ncol(aa)>2){
+    #    rmsConvergence1 <- sqrt(mean((aa[,ncol(aa)-1]-aa[,ncol(aa)-2])^2))
+    #}
+    #rmsConvergence <- sqrt(mean((aa[,ncol(aa)]-aa[,ncol(aa)-1])^2))
+    #rmsHalo <- sqrt(mean((a2[,ncol(a2)]-a2[,ncol(a2)-1])^2))
 
-    amin <- min(a2)
-    amax <- max(a2)
-    amax <- max(amax,2.5*amin)
+    #amin <- min(a2)
+    #amax <- max(a2)
+    #amax <- max(amax,2.5*amin)
 
     flog.debug("creating tibble")
     xx <- as.tibble(data.frame(
@@ -183,12 +184,12 @@ computeBoundaryBinsLattice <- function(aFile, sample, fov, maxG, haloInfiltratio
 
 
 
-joinBandArea<-function(bdat,sampleName,spot, aFile, maxG, haloInfiltrationDir, outDir, bbData) {
+joinBandArea<-function(bdat,sampleName,spot, allBoundaries, maxG, haloInfiltrationDir, outDir, bbData) {
 
     bdat$Band=as.character(bdat$Band)
-    flog.debug("computing boundary bins lattice")
-    bandArea <- computeBoundaryBinsLattice(aFile, sampleName, spot, maxG=maxG, haloInfiltrationDir, outDir=outDir, bbData=bbData)
-    flog.debug("joining bdat and bandArea")
+    flog.debug("getting area per band")
+    bandArea <- getAreaPerBand(allBoundaries, sampleName, spot, maxG=maxG, haloInfiltrationDir, outDir=outDir, bbData=bbData)
+    flog.debug("adding band area to band counts")
     xx=full_join(bdat,bandArea)
     flog.debug("filling in NAs with 0s")
     xx$n[is.na(xx$n)]=0
@@ -198,9 +199,147 @@ joinBandArea<-function(bdat,sampleName,spot, aFile, maxG, haloInfiltrationDir, o
     xx
 
 }
-      
 
-#' Calculate total area and density of interface 
+
+#' Calculate total area and density of entire FOVs
+#' 
+#' Calculate total area and density of FOVs that do not contain 
+#' tumors
+#' 
+#' @param aFiles              a vector of Halo boundary annotation files, with 
+#'                            '.annotations' extension in XML format
+#' @param dataFile            a *.rda file with Halo data for one sample
+#' @param cellTypeFile        file containing cell types to be calculated; each line
+#'                            is one cell type and each cell type can be either a single
+#'                            marker name or a comma-separated list of markers
+#' @param cellTypeName        a name to represent the cell types in marker file
+#' @param funcMarker          this marker will be added to all markers in cellTypeFile in order to
+#'                            compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]
+#' @param fovBB               a list with four elements: X0, X1, Y0, Y1, representing the minimum
+#'                            and maximum coordinates of the FOV to be plotted
+#' @param pad                 amount to trim from FOV before calculating
+#' @param maxG                the maximum factor of 10 to use for generating random points for area calculation
+#' @param writeCSVfiles       logical indicating whether to write density and area tables to file; 
+#' @param outDir              if writeCSVfiles=T, directory to which these files will be written
+#' @return a list containing two tables: 'density' and 'area' 
+#' @export
+calculateFOVStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName,
+                            fovBB, pad, maxG, writeCSVfiles=writeCSVfiles,
+                            funcMarker=funcMarker,outDir){
+  pad <- as.numeric(pad)
+  bbFOV <- fovBB
+
+  flog.debug("reading data file %s",dataFile)
+  dd <- readRDS(dataFile)
+  sampleName <- getSampleFromFileName(dataFile)
+
+  bbData <- bbFOV
+  if(pad > 0){
+      bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
+  }
+
+  markerSet <- scan(cellTypeFile,"")
+  if(!is.null(funcMarker)){
+    markerSet <- c(markerSet,paste0(markerSet,",",funcMarker))
+  }
+  fillNA <- list()
+  dummy <- lapply(markerSet, function(x){ fillNA[x] <<- 0 })
+
+  rho <- list()
+  areas <- list()
+
+  flog.debug("getting spots")
+  spots <- dd %>% dplyr::select(SPOT) %>% distinct(SPOT) %>% arrange(SPOT) %$% as.vector(SPOT)
+  for(spot in spots){
+    flog.debug("working on spot %s",spot)
+
+    flog.debug("checking for annotations file...")
+    sTag <- cc(sampleName, paste0("Spot",spot,".annotations"))
+    aai <- grep(sTag, aFiles)
+    tumB <- NULL
+    excB <- NULL
+
+    if(len(aai) > 0){
+      flog.debug("File found. Getting tumor and/or exclusion boundaries.")
+      aFile <- aFiles[aai]
+      boundaries <- readHaloAnnotations(aFile)
+
+      flog.debug("removing contained boundaries")
+      ## remove boundaries that are completely contained in another one
+      allBoundaries <- cleanBoundaries(boundaries)
+      tumB <- allBoundaries$tumB
+      excB <- allBoundaries$excB
+    }
+
+    if(len(tumB) > 0){
+      flog.debug("SPOT %s contains tumor boundaries. skipping.",spot)
+      next ## FOV with tumor boundaries are to be handled by calculateInterfaceStats()      
+      ## QUESTION: do we ever want to calculate total density of FOV even if there ARE
+      ## tumor boundaries? 
+    }
+
+    ds <- dd %>% filter(SPOT==spot & ValueType=="Positive")
+
+    ds <- convertCellMinMaxToMidpoints(ds) ## this can be done in removeExcludedPoints too 
+                                           ## but we need it done even if there arent any
+    ds <- trimDFToBB(ds,bbData) ## needs X and Y coords
+
+    ## calculate area of entire FOV
+    gg <- generateSobolGrid(10^maxG,bbData)
+    if(len(excB) > 0){
+      ## remove excluded points
+      ds <- removeExcludedPoints(ds,excB=excB)
+      excludedPts <- pointsInsidePolygonList(gg,excB)
+      gg <- gg[!excludedPts,]
+    }
+
+    markers <- ds %>% distinct(Marker) %$% as.character(Marker)
+    ds <- ds %>% spread(Marker,Value)
+    for(mi in markers) {
+      ds[[paste0(mi,"-")]] <- ifelse(ds[[mi]]==0,1,0)
+    }
+
+    ## get total number of cells
+    mt <- computeMultiMarkerTable(ds, markerSet) %>% filter(CD3==1) ## <- figure out how to make this dynamic
+    mtCounts <- mt %>% select(markerSet) %>% colSums
+    totalCounts <- as.matrix(mtCounts)
+
+    totalArea <- p2tomm * areaBB(bbData) * nrow(gg)/10^maxG
+    MM <- 1/totalArea
+
+    rho[[len(rho)+1]] <- data.frame(CellType=rownames(totalCounts),
+                                    Counts=totalCounts,
+                                    Total=totalCounts/totalArea,
+                                    Sample=sampleName,
+                                    SPOT=spot) %>%
+                         as.tibble
+
+    areas[[len(areas)+1]] <- data.frame(Area=totalArea) %>%
+                                as_tibble %>%
+                                mutate(Sample=sampleName,SPOT=spot)
+  }
+  rhos <- NULL
+  areass <- NULL
+  flog.debug("Num elements in list rho: %s",length(rho))
+  if(length(rho) > 0){
+    rhos <- rho %>% bind_rows
+  }
+  flog.debug("Num elements in list areas: %s",length(areas))
+  if(length(areas) > 0){
+    areass <- areas %>% bind_rows 
+  }
+
+  if(writeCSVfiles){
+    ctf <- basename(gsub("\\.txt","",cellTypeFile))
+    write_csv(as.data.frame(areass), cc(sampleName, ctf, "interfaceStatsV3_Area.csv"))
+    write_csv(as.data.frame(rhos), cc(sampleName, ctf, "interfaceStatsV3_Density.csv"))
+  }
+
+  return(list(density=rhos, area=areass))
+
+}      
+
+#' Calculate total area and density of tumor interface 
 #' 
 #' Calculate area and density of cells within a given distance to a tumor boundary
 #'
@@ -215,35 +354,38 @@ joinBandArea<-function(bdat,sampleName,spot, aFile, maxG, haloInfiltrationDir, o
 #'                            compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]
 #' @param fovBoundingBox      a list with four elements: X0, X1, Y0, Y1, representing the minimum
 #'                            and maximum coordinates of the FOV to be plotted
-#' @param plotBoundingBox     a list with four elements: X0, X1, Y0, Y1, representing the minimum
-#'                            and maximum coordinates of the outermost plot box [ TO DO: UPDATE THIS ] 
 #' @param pad                 amount to trim from FOV before calculating
 #' @param writeCSVfiles       logical indicating whether to write density and area tables to file; 
 #'                            default=TRUE
 #' @param haloInfiltrationDir directory containing Halo Infiltration data (csv, plot files)
 #' @param maxG                the maximum factor of 10 to use for generating random points for area calculation
 #' @param outDir              if writeCSVfiles=T, directory to which these files will be written
+#' @param interfaceBins       a vector of distances from tumor interface in which cells will be binned; 
+#'                            default=(-20:20)*10
 #' @return a list containing two tables: 'density' and 'area' 
 #' @export
 calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName,
-                                    fovBoundingBox, pad, plotBoundingBox, funcMarker=NULL,
-                                    writeCSVfiles=TRUE,haloInfiltrationDir,maxG,outDir){
+                              fovBoundingBox, pad, haloInfiltrationDir, funcMarker=NULL,
+                              writeCSVfiles=TRUE,maxG=5,outDir=NULL,
+                              interfaceBins=(-20:20)*10){
   pad <- as.numeric(pad)
   bbFOV <- fovBoundingBox
-  bbPlot <- plotBoundingBox
 
   flog.debug("reading data file %s",dataFile)
   dd <- readRDS(dataFile)
   sampleName <- getSampleFromFileName(dataFile)
 
-  fovTag <- "ORIG"
   bbData <- bbFOV
   if(pad > 0){
-      fovTag <- paste0("clip",pad)
       bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
   }
 
-  #interfaceBins <- (-20:20)*10
+  markerSet <- scan(cellTypeFile,"")
+  if(!is.null(funcMarker)){
+    markerSet <- c(markerSet,paste0(markerSet,",",funcMarker))
+  }
+  fillNA <- list()
+  dummy <- lapply(markerSet, function(x){ fillNA[x] <<- 0 })
 
   rho <- list()
   areas <- list()
@@ -252,38 +394,45 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
   spots <- dd %>% dplyr::select(SPOT) %>% distinct(SPOT) %>% arrange(SPOT) %$% as.vector(SPOT)
   for(spot in spots){
     flog.debug("working on spot %s",spot)
+
+    flog.debug("filtering dataset for spot..")
+    ds <- dd %>% filter(SPOT==spot & ValueType=="Positive")
+
     sTag <- cc(sampleName, paste0("Spot",spot,".annotations"))
     aai <- grep(sTag, aFiles)
     if(len(aai) > 0){
-      flog.debug("filtering dataset for spot..")
-      ds <- dd %>% filter(SPOT==spot & ValueType=="Positive")
       aFile <- aFiles[aai]
 
-      ## get Distance and Band assignments for all points that fall inside a tumor
-      flog.debug("getting band counts")
-      ds <- getBandCounts(ds, bbData,bbPlot,bbFOV, aFile)
-      if(is.null(ds)){ 
+      flog.debug("getting halo boundaries")
+      boundaries <- readHaloAnnotations(aFile)
+
+      flog.debug("removing contained boundaries")
+      ## remove boundaries that are completely contained in another one
+      allBoundaries <- cleanBoundaries(boundaries)
+      tumB <- allBoundaries$tumB
+      excB <- allBoundaries$excB
+
+      if(len(tumB) == 0){
         next
       }
-      
+      ##
+      ## get Distance and Band assignments for all points that fall inside a tumor
+      ##
+      flog.debug("adding to data distance from tumor boundary and band assignment")
+      ba <- getBandAssignments(ds, bbData, allBoundaries, interfaceBins)
+     
       flog.debug("filtering band count data for CD3+ and counting cells in each band")
-      bdat <- ds %>% filter(CD3==1) %>% filter(!is.na(Band)) %>% count(Band) %$% data.frame(Band,n)
+      bdat <- ba %>% filter(CD3==1) %>% filter(!is.na(Band)) %>% count(Band) %$% data.frame(Band,n)
       
-      flog.debug("joining band area")
-      bdat <- joinBandArea(bdat, sampleName, spot, aFile, maxG, haloInfiltrationDir, outDir, bbData)
+      flog.debug("calculating area per band and then summing for total area of space 200um around boundaries")
+      bdat <- joinBandArea(bdat, sampleName, spot, allBoundaries, maxG, haloInfiltrationDir, outDir, bbData)
       
-      markerSet <- scan(cellTypeFile,"")
-      if(!is.null(funcMarker)){
-        markerSet <- c(markerSet,paste0(markerSet,",",funcMarker))
-      }
-      fillNA <- list()
-      dummy <- lapply(markerSet, function(x){ fillNA[x] <<- 0 })
       flog.debug("computing multimarker table and summarizing each band")
-      mt <- computeMultiMarkerTable(ds,markerSet)
+      mt <- computeMultiMarkerTable(ba,markerSet)
       mtCounts <- mt %>%
-                  group_by(Band) %>%
-                  summarize_at(markerSet,sum) %>%
-                  complete(Band,fill=fillNA)
+                group_by(Band) %>%
+                summarize_at(markerSet,sum) %>%
+                complete(Band,fill=fillNA)
       mtB <- as.matrix(mtCounts[!is.na(mtCounts$Band),2:ncol(mtCounts)],check.names=F)
       rownames(mtB) <- mtCounts$Band[!is.na(mtCounts$Band)]
 
@@ -292,6 +441,8 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
 
       flog.debug("calculating total area for bands each inside and outside tumor")
       bandAreaCollapse <- tapply(bdat$Area,interfaceSide(bdat$Band),sum)
+
+      ## divide into 1, to later be multiplied by counts to calculate density
       MM <- diag(1/bandAreaCollapse)
       rownames(MM) <- c("Inside","Outside")
       colnames(MM) <- c("Inside","Outside")
@@ -309,9 +460,9 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
 
       flog.debug("getting area")
       areas[[len(areas)+1]] <- data.frame(Area=bandAreaCollapse) %>%
-                                rownames_to_column("Side") %>%
-                                as_tibble %>%
-                                mutate(Sample=sampleName,SPOT=spot)
+                                  rownames_to_column("Side") %>%
+                                  as_tibble %>%
+                                  mutate(Sample=sampleName,SPOT=spot)
     }
   }
   rhos <- NULL
@@ -341,7 +492,7 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
 #' 
 #' @param boundaries            table generated by readHaloAnnotations
 #'                             
-removeContainedBoundaries <- function(boundaries){
+cleanBoundaries <- function(boundaries){
 
     regionTable <- boundaries %>% bind_rows %>% count(RegionNum,RegionCode)
     excB <- boundaries[regionTable$RegionCode!="Tum"]
@@ -368,16 +519,22 @@ removeContainedBoundaries <- function(boundaries){
 #' that fall inside those regions
 #' 
 #' @param ds     tibble containing at minimum, Sample, SPOT, UUID, X, Y, Marker, Value
-#' @param aFile  Halo boundaries annotation file in XML format
-removeExcludedPoints<-function(ds,aFile) {
+#' @param excB   a list of excluded region tables as returned by cleanBoundaries;
+#'               if NULL, must provide the original Halo annotations file in XML format
+#' @param aFile  Halo boundaries annotation file in XML format; if NULL, must provide
+#'               the list of excluded region tables as returned by cleanBoundaries()
+#' @return tibble filtered to remove points that fall inside exclusion boundaries
+removeExcludedPoints<-function(ds,aFile=NULL,excB=NULL) {
 
-    ds=ds %>%
-        mutate(X=(XMax+XMin)/2,Y=-(YMax+YMin)/2) %>%
-        dplyr::select(Sample,SPOT,UUID,X,Y,Marker,Value)
+    if(!all(c('X','Y') %in% colnames(ds))){
+        ds <- convertCellMinMaxToMidpoints(ds)
+    }
 
-    boundaries <- readHaloAnnotations(aFile)
-    regionTable <- boundaries %>% bind_rows %>% count(RegionNum,RegionCode)
-    excB <- boundaries[regionTable$RegionCode!="Tum"]
+    if(is.null(excB)){
+        boundaries <- readHaloAnnotations(aFile)
+        allBoundaries <- cleanBoundaries(boundaries)
+        excB <- allBoundaries$excB
+    }
 
     spCells <- ds %>% dplyr::select(UUID,X,Y)
     coordinates(spCells) <- ~X+Y
@@ -408,27 +565,16 @@ removeExcludedPoints<-function(ds,aFile) {
 #'                        for X, Y, and one for each marker
 #' @param bbData          a list containing X0,X1,Y0,Y1 representing the boundary
 #'                        of the trimmed FOV
-#' @param bbPlot          a list containing X0,X1,Y0,Y1 to be used as boundary of
-#'                        entire plot
-#' @param bbFOV0          a list containing X0,X1,Y0,Y1 showing the actual boundary
-#'                        of the FOV (untrimmed)
-#' @param aFile           Halo boundaries annotations file in XML format 
+#' @param allBoundaries   a list returned from readHaloAnnotations
 #' @param interfaceBins   vector of distances (integers) that define each band; default = (-20:20)*10 
-getBandCounts<-function(ds,bbData,bbPlot,bbFOV0,aFile,interfaceBins=NULL){
+getBandAssignments<-function(ds,bbData,allBoundaries,interfaceBins=(-20:20)*10){
 
     flog.debug("getting boundaries")
-    ## boundary XML data to table
-    boundaries <- readHaloAnnotations(aFile)
-    sepB <- removeContainedBoundaries(boundaries)
-    tumB <- sepB$tumB
-    excB <- sepB$excB
+    tumB <- allBoundaries$tumB
+    excB <- allBoundaries$excB
     if(is.null(tumB) || len(tumB) == 0){
-        #flog.info("No TUMOR boundaries found in file %s. Skipping.")
-        #return()
-    }
-
-    if(is.null(interfaceBins)) {
-        interfaceBins <- (-20:20)*10
+        flog.info("No TUMOR boundaries found in file %s. Skipping.")
+        return()
     }
 
     markers <- ds %>% distinct(Marker) %$% as.character(Marker)
@@ -502,59 +648,80 @@ getBandCounts<-function(ds,bbData,bbPlot,bbFOV0,aFile,interfaceBins=NULL){
 
 #' Plot total density of each FOV for one sample
 #'
-#' @param dataFile               *.rda file containing Halo data for a single sample
-#' @param annotationsDir         directory containing *.annotations files, XML files of boundary
-#'                               annotations from Halo
-#' @param cellTypeFile           a text file with each line containing a cell type marker; may be
-#'                               marker combinations delimited by commas
-#' @param cellTypeName           a character string naming the group of cell types (e.g., T Cells)
-#' @param fovBB                  a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
-#'                               for FOVs
-#' @param pad                    amount to trim from each FOV
-#' @param plotBB                 a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
-#'                               for whole plots
-#' @param pdfFile                output PDF file
-#' @param logPlot                logical; when set to TRUE, plot density per mm^2; default=FALSE
-#' @param funcMarker             character string of functional marker to plot on top of every other marker
-#' @param sampleColor            character string indicating HTML color to represent this particular sample
-#' @param sampleColorDark        a slightly darker shade of sampleColor, to be used for density of funcMarker+
-#' @param sortByMarker           sort FOVs by density of this marker (cell type)in ascending order;
-#'                               default=CD3
-#' @param exclude_sample_fov     list where names are sample names and values are vectors of FOV to be  
-#'                               removed from data before any calculations 
-#' @param exclude_sample_marker  list where names are sample names and values are vectors of markers to be 
-#'                               should be removed from data before any calculations
-#' @param writeCSVfiles          logical; write CSV files, one of density values and one of area values; 
-#'                               default=TRUE
-#' @param ymax                   maximum y value; by default, this value is dictated by the data
-#' @param haloInfiltrationDir    directory containing Halo Infiltration data (csv, plot files)
-#' @param maxG                   ???
-#' @param outDir                 if writeCSVfiles=T, directory to which these files will be written#' @return nothing
+#' @param dataFile                  *.rda file containing Halo data for a single sample
+#' @param annotationsDir            directory containing *.annotations files, XML files of boundary
+#'                                  annotations from Halo
+#' @param cellTypeFile              a text file with each line containing a cell type marker; may be
+#'                                  marker combinations delimited by commas
+#' @param cellTypeName              a character string naming the group of cell types (e.g., T Cells)
+#' @param fovBB                     a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
+#'                                  for FOVs
+#' @param pad                       amount to trim from each FOV
+#' @param pdfFile                   output PDF file
+#' @param logPlot                   logical; when set to TRUE, plot density per mm^2; default=FALSE
+#' @param funcMarker                character string of functional marker to plot on top of every other marker
+#' @param sampleColor               character string indicating HTML color to represent this particular sample
+#' @param sampleColorDark           a slightly darker shade of sampleColor, to be used for density of funcMarker+
+#' @param sortByMarker              sort FOVs by density of this marker (cell type)in ascending order;
+#'                                  default=CD3
+#' @param exclude_sample_fov        list where names are sample names and values are vectors of FOV to be  
+#'                                  removed from data before any calculations 
+#' @param exclude_sample_marker     list where names are sample names and values are vectors of markers to be 
+#'                                  should be removed from data before any calculations
+#' @param writeCSVfiles             logical; write CSV files, one of density values and one of area values; 
+#'                                  default=TRUE
+#' @param ymax                      maximum y value; by default, this value is dictated by the data
+#' @param haloInfiltrationDir       directory containing Halo Infiltration data (csv, plot files)
+#' @param maxG                      ???
+#' @param outDir                    if writeCSVfiles=T, directory to which these files will be written#' @return nothing
+#' @param byBand                    logical indicating whether to break down density by distance from tumor interface; 
+#'                                  default=FALSE
+#' @param bandWidth                 width of each band around tumor interface, to be used when byBand is TRUE; 
+#'                                  default=10
+#' @param maxDistanceFromInterface  include only those cells within this distance from tumor interface
 #' @export
-plotTotalDensity <- function(dataFile, annotationsDir, cellTypeFile, cellTypeName,
-                             fovBB, pad, plotBB, pdfFile, ymax=NULL,
-                             logPlot=F, funcMarker="KI67", sortByMarker="CD3", sampleColor="#f16913",
-                             sampleColorDark="#80380A", exclude_sample_fov=NULL, exclude_sample_marker=NULL,
-                             writeCSVfiles=TRUE, haloInfiltrationDir,maxG,outDir){
+plotDensity <- function(dataFile, annotationsDir, cellTypeFile, cellTypeName,
+                         fovBB, pad, pdfFile, ymax=NULL,
+                         logPlot=F, funcMarker="KI67", sortByMarker="CD3", sampleColor="#f16913",
+                         sampleColorDark="#80380A", exclude_sample_fov=NULL, exclude_sample_marker=NULL,
+                         writeCSVfiles=TRUE, haloInfiltrationDir,maxG,outDir, byBand=FALSE, bandWidth=10,
+                         maxDistanceFromInterface=200){
 
+    if(!byBand){
+        ## for plotting TOTAL density around tumor interface, create one band/bin
+        interfaceBins = c(-200,200)
+    } else {
+        interfaceBins = (-maxDistanceFromInterface:maxDistanceFromInterface)*bandWidth
+    }
     aFiles <- file.path(annotationsDir,dir(annotationsDir)[grep("\\.annotations$",dir(annotationsDir))])
 
+    rho <- NULL
     ## get density and area
     flog.debug("calculating interface stats")
     is <- calculateInterfaceStats(aFiles, dataFile, cellTypeFile, cellTypeName,
-                                 fovBB, pad, plotBB, writeCSVfiles=writeCSVfiles,
-                                 funcMarker=funcMarker,haloInfiltrationDir,maxG,outDir)
+                                 fovBB, pad, haloInfiltrationDir, writeCSVfiles=writeCSVfiles,
+                                 funcMarker=funcMarker,maxG=maxG,outDir=outDir,
+                                 interfaceBins=interfaceBins)
+    if(!is.null(is$density)){
+        rho <- is$density %>% select(CellType,Sample,SPOT,Total)
+    }
 
-    rho <- is$density
+    flog.debug("calculating stats for FOVs without tumor boundaries")
+    fs <- calculateFOVStats(aFiles, dataFile, cellTypeFile, cellTypeName, 
+                            fovBB, pad, maxG, writeCSVfiles=writeCSVfiles,
+                            funcMarker=funcMarker,outDir)
+
+    if(!is.null(fs$density)){    
+        rho <- bind_rows(rho,fs$density)
+    }
     if(is.null(rho)){
         return()
     }
 
     ## remove any exclusions
-    flog.debug("removing exclusions")
-    if(!is.null(exclude_sample_fov) || !is.null(exclude_sample_marker)){
-        rho <- removeExclusions(rho, exclude_sample_fov=exclude_sample_fov,
-                             exclude_sample_marker=exclude_sample_marker)
+    flog.debug("removing sample_fov/sample_marker exclusions")
+    if(!is.null(exclude_sample_fov)){
+        rho <- removeExclusions(rho, exclude_sample_fov=exclude_sample_fov)
     }
 
     ## get max density

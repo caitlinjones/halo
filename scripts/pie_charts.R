@@ -12,16 +12,17 @@ suppressPackageStartupMessages(library("halo"))
 ###
 parser <- ArgumentParser()
 ## args are preferrably all in manifest
-parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?initializeProject for details")
-## args required if manifest not given
-parser$add_argument("--cell_type_markers", type="character", default=NULL, help="comma-separated string of markers, for each of which a pie chart will be generated; e.g., 'CD3,CD4,CD8,CD20'")
-parser$add_argument("-c", "--counts_rda_file", type="character", help="*.rda file containing list of counts-related tables (output of counts.R)")
-## optional args
-parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
-parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
+parser$add_argument("-m", "--manifest", type="character", default=NULL, 
+                    help="file containing all project parameters; run ?initializeProject for details")
+parser$add_argument("--debug", action="store_true", default=FALSE, 
+                    help="print extra output for debugging")
 
 args <- parser$parse_args()
 ####################################################
+
+usage <- function(){
+    stop("Usage: Rscript pie_charts.R -m manifest.txt")
+}
 
 pp <- NULL
 
@@ -30,19 +31,21 @@ print(args$manifest)
 if(!is.null(args$manifest)){
     pp <- initializeProject(args$manifest,type="pie_charts")
 } else {
-    pp <- args
+    usage()
 }
 
-if(!is.null(pp)){
-    logParams(pp,"Making pie charts")
-}
 
+## validate input
 if(is.null(pp$cell_type_markers)){
     stop("Need list of cell type markers in order to make pie charts.")
 }
-
 if(is.null(pp$counts_rda_file)){
     stop("Please provide counts with 'counts_rda_file' param")
+}
+
+## log parameters
+if(!is.null(pp)){
+    logParams(pp,"Making pie charts")
 }
 
 if(is.null(pp$pdf_pie_charts_by_sample)){

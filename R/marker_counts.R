@@ -2,6 +2,7 @@ options(stringsAsFactors=FALSE)
 
 pixel2um <- 0.293
 p2tomm <- pixel2um^2/(1000^2)
+p2toum=pixel2um^2
 
 #' Load data from *.rda file
 #'
@@ -116,7 +117,6 @@ validateSingleFOVFile <- function(uniqFOVs){
 #' @export
 trimImage <- function(dat, pad=0){
     ## remove cells around edge of FOV (???)
-    pixel2um <- 0.293
     if(pad > 0){
         bb <- list(X0=min(dat$XMax),Y0=min(dat$YMax),
                    X1=max(dat$XMin),Y1=max(dat$YMin))

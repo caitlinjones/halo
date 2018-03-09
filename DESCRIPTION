@@ -27,6 +27,7 @@ Depends: R (>= 3.4.3),
     xlsx,
     xlsxjars,
     XML,
+    yaml
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

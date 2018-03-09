@@ -137,6 +137,23 @@ getBoundingBoxL<-function(spObj) {
     list(X0=min(spObj$X),Y0=min(spObj$Y),X1=max(spObj$X),Y1=max(spObj$Y))
 }
 
+#' Replace Min/Max X and Y coordinates from Halo with cell midpoints
+#'
+#' Given a tibble containing columns XMax, Xmin, YMax, YMin, replace
+#' those columns with 'X' and 'Y' columns which contain the midpoint
+#' between those min and max values
+#' 
+#' @param ds  tibble containing columns XMax, Xmin, YMax, YMin, Sample,
+#'            SPOT, UUID, Marker, Value
+#' @return  tibble containing only those columns mentioned above
+convertCellMinMaxToMidpoints <- function(ds){
+    ds %>%
+        mutate(X=(XMax+XMin)/2,Y=-(YMax+YMin)/2) %>%
+        dplyr::select(Sample,SPOT,UUID,X,Y,Marker,Value)
+
+}
+
+
 #' Get X and Y coordinates of box enclosing two existing boxes
 #'
 joinBoundingBoxes<-function(b1,b2){

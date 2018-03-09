@@ -12,18 +12,21 @@ suppressPackageStartupMessages(library("halo"))
 ###
 parser <- ArgumentParser()
 ## args are preferrably all in manifest
-parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?initializeProject for details")
-## args required if manifest not given
-parser$add_argument("--cell_types_file", type="character", default=NULL, help="file containing list of cell type markers to be included on plots; each line is one marker combination and may contain a single marker or a comma-separated list of markers (e.g., 'CD3' or 'CD3,CD8-,SOX10-'")
-parser$add_argument("-d", "--data_file", type="character", help="*.rda files, containing halo data for one sample")
-parser$add_argument("-a", "--annotations_dir", type="character", help="directory of Halo *.annotations files in XML format")
-## optional args
-parser$add_argument("-v", "--verbose", action="store_true", default=FALSE, help="print extra output")
-parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
-parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
+parser$add_argument("-m", "--manifest", type="character", default=NULL, 
+                    help="file containing all project parameters; run ?initializeProject for details")
+parser$add_argument("--cellTypeLocations", action="store_true", default=FALSE, 
+                    help="plot cell type locations for each sample FOV")
+parser$add_argument("--plotDensity", action="store_true", default=FALSE, 
+                    help="plot total density of cells within a set distance from a tumor boundary")
+parser$add_argument("--debug", action="store_true", default=FALSE, 
+                    help="print extra output for debugging")
 
 args <- parser$parse_args()
 ####################################################
+
+usage <- function(){
+    stop("Usage: Rscript spatial_plots.R -m manifest.txt")
+}
 
 pp <- NULL
 
@@ -33,23 +36,13 @@ if(!is.null(args$manifest)){
     pp <- initializeProject(args$manifest,type="spatial_plots")
     flog.info("Pulled params from manifest %s",args$manifest)
 } else {
-    pp <- args
+    usage()
 }
 
 if(!is.null(pp)){
     logParams(pp,"Making spatial plots")
 }
 
-## validate input
-if(is.null(pp$cell_types_file)){
-    stop("Please specify 'cell_types_file'.") 
-}
-if(is.null(pp$data_file)){
-    stop("Please specify 'data_file'.")
-}
-if(is.null(pp$annotations_dir)){
-    stop("Please specify 'annotations_dir'.")
-}
 
 flog.info("Plotting cell type locations")
 pdfFile <- gsub("\\.rda","_cellTypeLocations.pdf",basename(pp$data_file))
@@ -58,9 +51,10 @@ plotCellTypeLocations(pp$data_file, pp$annotations_dir, pp$cell_types_file, pp$f
 
 flog.info("Plotting total density")
 pdfFile <- gsub("\\.rda","_totalDensity.pdf",basename(pp$data_file))
-plotTotalDensity(pp$data_file, pp$annotations_dir, pp$cell_types_file, pp$cell_type_name, 
-                  pp$fov_bb, pp$pad, pp$plot_bb, pdfFile, logPlot=pp$log_plot,
-                  funcMarker=pp$func_marker, sampleColor=pp$sample_color, sampleColorDark=pp$sample_color_dark,
-                  exclude_sample_fov=pp$exclude_sample_fov, sortByMarker=pp$sort_by_marker,
-                  exclude_sample_marker=pp$exclude_sample_marker,ymax=pp$ymax)
+plotDensity(pp$data_file, pp$annotations_dir, pp$cell_types_file, pp$cell_type_name, 
+            pp$fov_bb, pp$pad, pdfFile, logPlot=pp$log_plot,
+            funcMarker=pp$func_marker, sampleColor=pp$sample_color, 
+            sampleColorDark=pp$sample_color_dark, exclude_sample_fov=pp$exclude_sample_fov, 
+            sortByMarker=pp$sort_by_marker, ymax=pp$ymax, 
+            haloInfiltrationDir=pp$halo_infiltration_dir, outDir=pp$out_dir, maxG=pp$max_g)
 

@@ -15,6 +15,12 @@ install_github("caitlinjones/halo")
 ```
 ### Step 2: Create manifest with all project parameters
 Example [here](example/manifest.txt) 
+Note: If running multiple steps (e.g., pie charts and spatial plots), 
+it is a good idea to use one manifest with all parameters needed for both
+steps, although it is possible to use separate manifests with only those
+parameters needed for each step. The example manifests here are mostly 
+separate (i.e., they only have the parameters needed for one step). This will all be
+documented eventually.
 
 ### Step 3: Run pipeline or one step at a time
 To generate counts and/or plots of Object Analysis data from Halo, run 

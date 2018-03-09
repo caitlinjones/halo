@@ -13,24 +13,17 @@ suppressPackageStartupMessages(library("halo"))
 parser <- ArgumentParser()
 
 ## args are preferrably all in manifest
-parser$add_argument("-m", "--manifest", type="character", default=NULL, help="file containing all project parameters; run ?initializeProject for details")
-
-## args required if manifest not given
-parser$add_argument("-mf", "--markers", type="character", help="comma separated file containing marker information")
-parser$add_argument("-d", "--data_dir", type="character", default=".", help="directory containing *.rda files of image data")
-
-## optional arguments
-parser$add_argument("-p", "--pad", type="integer", default=0, help="add this much padding around all sides of FOV")
-parser$add_argument("--run_frac_total", action="store_true", help="add sheet to counts file containing fractions of total cells")
-parser$add_argument("--run_medians", action="store_true", help="add sheet to counts file containing median counts")
-parser$add_argument("--alt_bases", default=NULL, help="comma separated string of markers to use as alternate 'baselines'")
-parser$add_argument("--counts_xlsx_file", type="character", help="*.xlsx file of count")
-
-parser$add_argument("-l", "--log", type="character", default=gsub(" ","_",date()), help="log file")
-parser$add_argument("--debug", action="store_true", default=FALSE, help="print extra output for debugging")
+parser$add_argument("-m", "--manifest", type="character", default=NULL, 
+                    help="file containing all project parameters; run ?initializeProject for details")
+parser$add_argument("--debug", action="store_true", default=FALSE, 
+                    help="print extra output for debugging")
 
 args <- parser$parse_args()
 ####################################################
+
+usage <- function(){
+    stop("Usage: Rscript counts.R -m manifest.txt")
+}
 
 pp <- NULL
 
@@ -39,18 +32,18 @@ print(args$manifest)
 if(!is.null(args$manifest)){
     pp <- initializeProject(args$manifest,type="counts")
 } else {
-    pp <- args
+    usage()
+}
+
+## validate input
+if(is.null(pp$markers) || is.null(pp$data_dir)){
+    stop("The following args need to be set in order to run counts: 'markers' and 'data_dir'")
 }
 
 if(!is.null(pp)){
     logParams(pp,"Generating counts")
 }
 
-
-### run counts first, if needed
-if(is.null(pp$markers) || is.null(pp$data_dir)){
-    stop("The following args need to be set in order to run counts: 'markers' and 'data_dir'")
-}
 allTbls <- countMarkers(pp$markers, pp$data_dir, pad=pp$pad, altBases=pp$alt_bases,
                      countsXLSXFile=pp$counts_xlsx_file, countsRDAFile=pp$counts_rda_file, 
                      runCounts=pp$run_counts, runFracTotal=pp$run_frac_total,
