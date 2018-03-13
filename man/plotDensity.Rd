@@ -2,7 +2,7 @@
 % Please edit documentation in R/melanoma_spatial.R
 \name{plotDensity}
 \alias{plotDensity}
-\title{Plot total density of each FOV for one sample}
+\title{Plot density of each FOV for one sample}
 \usage{
 plotDensity(dataFile, annotationsDir, cellTypeFile, cellTypeName, fovBB, pad,
   pdfFile, ymax = NULL, logPlot = F, funcMarker = "KI67",
@@ -67,5 +67,5 @@ default=10}
 \item{maxDistanceFromInterface}{include only those cells within this distance from tumor interface}
 }
 \description{
-Plot total density of each FOV for one sample
+Plot density of each FOV for one sample
 }

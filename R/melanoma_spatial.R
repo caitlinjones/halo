@@ -88,7 +88,7 @@ calculateBandAreas <- function(allBoundaries,maxG=5,bbData,interfaceBins) {
     if(is.null(interfaceBins)){
         interfaceBins <- (-20:20)*10
     }
-
+print(interfaceBins)
     tumB <- allBoundaries$tumB
     excB <- allBoundaries$excB
 
@@ -140,12 +140,14 @@ getAreaPerBand <- function(allBoundaries, sample, fov, maxG, haloInfiltrationDir
     flog.debug("%s SPOT %s",SAMPLE,sampleSPOT)
     aa=calculateBandAreas(allBoundaries,maxG=maxG,bbData,interfaceBins)
 
-    flog.debug("reading infiltration data file %s", paste0(SAMPLE,sampleSPOT,"_infiltration_ex_data.csv"))
-    sink("/dev/null")
-    mp <- read_csv(file.path(haloInfiltrationDir,paste0(SAMPLE,sampleSPOT,"_infiltration_ex_data.csv")))
-    sink()
-    imp <- grep("Band",colnames(mp))
-    a2 <- data.frame(aa[,ncol(aa),drop=F],AreaMP=as.numeric(mp[,imp]))
+###### CHECKING TO MAKE SURE CALCULATIONS ARE CORRECT???
+
+    #flog.debug("reading infiltration data file %s", paste0(SAMPLE,sampleSPOT,"_infiltration_ex_data.csv"))
+    #sink("/dev/null")
+    #mp <- read_csv(file.path(haloInfiltrationDir,paste0(SAMPLE,sampleSPOT,"_infiltration_ex_data.csv")))
+    #sink()
+    #imp <- grep("Band",colnames(mp))
+    #a2 <- data.frame(aa[,ncol(aa),drop=F],AreaMP=as.numeric(mp[,imp]))
 
     #rmsConvergence1 <- NA
     #if(ncol(aa)>2){
@@ -158,16 +160,19 @@ getAreaPerBand <- function(allBoundaries, sample, fov, maxG, haloInfiltrationDir
     #amax <- max(a2)
     #amax <- max(amax,2.5*amin)
 
+#########################################################
+
     flog.debug("creating tibble")
     xx <- as.tibble(data.frame(
             Sample=SAMPLE,
             Spot=sampleSPOT,
             Version="v3.4",
             MaxG=maxG,
-            Band=rownames(a2),
-            Area=a2[,1],
-            Halo=a2[,2])
-        )
+            Band=rownames(aa), #Band=rownames(a2),
+            Area=aa[,1] #Area=a2[,1]#,
+       #     Halo=a2[,2])
+            )
+          )
 
     if(writeCSVfiles){
         flog.debug("writing csv files")
@@ -183,12 +188,16 @@ getAreaPerBand <- function(allBoundaries, sample, fov, maxG, haloInfiltrationDir
 }
 
 
-
-joinBandArea<-function(bdat,sampleName,spot, allBoundaries, maxG, haloInfiltrationDir, outDir, bbData) {
+#' Add columns for band area to existing tibble with a column of bands
+#'
+#' Add columns for band area to existing tibble with a column of bands
+#'
+#' @param bdat      tibble of band data, including at least a column named Band
+#' @param bandArea  a data frame or tibble with an area value for each band in bdat
+#' @return tibble containing all data in bdat and bandArea
+joinBandArea<-function(bdat,bandArea) {
 
     bdat$Band=as.character(bdat$Band)
-    flog.debug("getting area per band")
-    bandArea <- getAreaPerBand(allBoundaries, sampleName, spot, maxG=maxG, haloInfiltrationDir, outDir=outDir, bbData=bbData)
     flog.debug("adding band area to band counts")
     xx=full_join(bdat,bandArea)
     flog.debug("filling in NAs with 0s")
@@ -199,7 +208,6 @@ joinBandArea<-function(bdat,sampleName,spot, allBoundaries, maxG, haloInfiltrati
     xx
 
 }
-
 
 #' Calculate total area and density of entire FOVs
 #' 
@@ -362,12 +370,14 @@ calculateFOVStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName,
 #' @param outDir              if writeCSVfiles=T, directory to which these files will be written
 #' @param interfaceBins       a vector of distances from tumor interface in which cells will be binned; 
 #'                            default=(-20:20)*10
+#' @param statsByBand         logical; return stats broken down by interface bands (bins) as opposed to total
+#'                            stats; default=FALSE 
 #' @return a list containing two tables: 'density' and 'area' 
 #' @export
 calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName,
                               fovBoundingBox, pad, haloInfiltrationDir, funcMarker=NULL,
                               writeCSVfiles=TRUE,maxG=5,outDir=NULL,
-                              interfaceBins=(-20:20)*10){
+                              interfaceBins=(-20:20)*10,statsByBand=FALSE){
   pad <- as.numeric(pad)
   bbFOV <- fovBoundingBox
 
@@ -406,7 +416,7 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
       flog.debug("getting halo boundaries")
       boundaries <- readHaloAnnotations(aFile)
 
-      flog.debug("removing contained boundaries")
+      flog.debug("removing contained boundaries and separating tumors and exclusions")
       ## remove boundaries that are completely contained in another one
       allBoundaries <- cleanBoundaries(boundaries)
       tumB <- allBoundaries$tumB
@@ -423,10 +433,12 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
      
       flog.debug("filtering band count data for CD3+ and counting cells in each band")
       bdat <- ba %>% filter(CD3==1) %>% filter(!is.na(Band)) %>% count(Band) %$% data.frame(Band,n)
-      
-      flog.debug("calculating area per band and then summing for total area of space 200um around boundaries")
-      bdat <- joinBandArea(bdat, sampleName, spot, allBoundaries, maxG, haloInfiltrationDir, outDir, bbData)
-      
+    
+      flog.debug("calculating area of each band") 
+      bandArea <- getAreaPerBand(allBoundaries,sampleName,spot,maxG=maxG, 
+                                 haloInfiltrationDir, outDir=outDir, bbData=bbData,
+                                 interfaceBins=interfaceBins)
+
       flog.debug("computing multimarker table and summarizing each band")
       mt <- computeMultiMarkerTable(ba,markerSet)
       mtCounts <- mt %>%
@@ -436,33 +448,48 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
       mtB <- as.matrix(mtCounts[!is.na(mtCounts$Band),2:ncol(mtCounts)],check.names=F)
       rownames(mtB) <- mtCounts$Band[!is.na(mtCounts$Band)]
 
-      flog.debug("counting number of cells inside and outside the tumor for each marker")
-      mtBCollapse <- apply(mtB,2,function(x){tapply(x,interfaceSide(rownames(mtB)),sum)})
+      if(statsByBand){
+        MM <- 1/bandArea$Area
+        densityByMarker <- as.data.frame(t(mtB * MM))
+        rho[[len(rho)+1]] <- densityByMarker %>%
+                              cbind(data.frame(Counts=t(mtB),check.names=FALSE)) %>%
+                              rownames_to_column("CellType") %>%
+                              mutate(Sample=sampleName,SPOT=spot)
+        
+        areas[[len(areas)+1]] <- bandArea %>% select(Band,Area,Sample,SPOT=Spot)
+                                    
+      } else {
+        flog.debug("calculating area per band and then summing for total area of space 200um around boundaries")
+        bdat <- joinBandArea(bdat, bandArea)
+      
+        flog.debug("counting number of cells inside and outside the tumor for each marker")
+        mtBCollapse <- apply(mtB,2,function(x){tapply(x,interfaceSide(rownames(mtB)),sum)})
 
-      flog.debug("calculating total area for bands each inside and outside tumor")
-      bandAreaCollapse <- tapply(bdat$Area,interfaceSide(bdat$Band),sum)
+        flog.debug("calculating total area for bands each inside and outside tumor")
+        bandAreaCollapse <- tapply(bdat$Area,interfaceSide(bdat$Band),sum)
 
-      ## divide into 1, to later be multiplied by counts to calculate density
-      MM <- diag(1/bandAreaCollapse)
-      rownames(MM) <- c("Inside","Outside")
-      colnames(MM) <- c("Inside","Outside")
+        ## divide into 1, to later be multiplied by counts to calculate density
+        MM <- diag(1/bandAreaCollapse)
+        rownames(MM) <- c("Inside","Outside")
+        colnames(MM) <- c("Inside","Outside")
 
-      flog.debug("getting total counts and area for ALL bands")
-      totalCounts <- colSums(mtBCollapse)
-      totalArea <- sum(bandAreaCollapse)
+        flog.debug("getting total counts and area for ALL bands")
+        totalCounts <- colSums(mtBCollapse)
+        totalArea <- sum(bandAreaCollapse)
 
-      flog.debug("calculating density")
-      rho[[len(rho)+1]] <- (t(mtBCollapse) %*% MM) %>%
-                            as.data.frame %>%
-                            cbind(data.frame(Counts=t(mtBCollapse))) %>%
-                            rownames_to_column("CellType") %>%
-                            mutate(Total=totalCounts/totalArea,Sample=sampleName,SPOT=spot)
+        flog.debug("calculating density")
+        rho[[len(rho)+1]] <- (t(mtBCollapse) %*% MM) %>%
+                                as.data.frame %>%
+                                cbind(data.frame(Counts=t(mtBCollapse))) %>%
+                                rownames_to_column("CellType") %>%
+                                mutate(Total=totalCounts/totalArea,Sample=sampleName,SPOT=spot)
 
-      flog.debug("getting area")
-      areas[[len(areas)+1]] <- data.frame(Area=bandAreaCollapse) %>%
-                                  rownames_to_column("Side") %>%
-                                  as_tibble %>%
-                                  mutate(Sample=sampleName,SPOT=spot)
+        flog.debug("getting area")
+        areas[[len(areas)+1]] <- data.frame(Area=bandAreaCollapse) %>%
+                                      rownames_to_column("Side") %>%
+                                      as_tibble %>%
+                                      mutate(Sample=sampleName,SPOT=spot)
+      }
     }
   }
   rhos <- NULL
@@ -473,7 +500,11 @@ calculateInterfaceStats <- function(aFiles, dataFile, cellTypeFile, cellTypeName
   }
   flog.debug("Num elements in list areas: %s",length(areas))
   if(length(areas) > 0){
-    areass <- areas %>% bind_rows %>% spread(Side,Area)
+    if(statsByBand){ 
+      areass <- areas %>% bind_rows %>% spread(Band,Area) 
+    } else {
+      areass <- areas %>% bind_rows %>% spread(Side,Area)
+    }
   }
 
   if(writeCSVfiles){
@@ -646,7 +677,228 @@ getBandAssignments<-function(ds,bbData,allBoundaries,interfaceBins=(-20:20)*10){
     return(ds)
 }
 
-#' Plot total density of each FOV for one sample
+#' Plot density for each marker, broken down by FOV
+#' 
+#' Bar plot(s) showing density of a marker in each FOV of one sample
+#'
+#' @param markers      vector of markers/marker combinations to be plotted; there will
+#'                     be one plot per marker
+#' @param markerTable  tibble containing columns for Sample, SPOT, and a column of densities
+#'                     for each marker
+#' @param funcMarker   a functional marker that is included in the marker combos in markerTable;
+#'                     for each marker, there should be a combo that includes the functional marker
+#'                     (indicating that cell type is positive for this marker) and one that does
+#'                     not (indicating that the cell type may or may not be positive for this marker);
+#'                     default=NULL;
+#' @param sampleColor  all bars will be colored gray except for the Median bar, which will be
+#'                     this color; default=#f16913
+#' @param sampleColorDark  a darker version of sampleColor (or really any color of your choosing)
+#'                         that will represent the median of cells positive for the funcMarker;
+#'                         default=#80380A
+#' @param spotOrder    a vector of FOV numbers indicating the order in which FOVs should be in 
+#'                     the plot(s); default=NULL
+#' @param logPlot      logical indicating that density should be plotted on log scale; default=FALSE
+#' @param onePanel     if plotting multiple markers, logical indicating all plots should be on one
+#'                     panel; default=TRUE
+#' @param pdfFile      if given, plot(s) will be written to this file; default=NULL
+plotTotalDensity <- function(markers, markerTable,funcMarker=NULL,sampleColor="#f16913",
+                             sampleColorDark="#80380A",spotOrder=NULL,logPlot=FALSE,
+                             onePanel=TRUE,pdfFile=NULL){
+
+    ## TO DO:
+    #    1. FIGURE OUT COLORS
+    #    2. ADD LOGPLOT FUNCTIONALITY
+    #    3. FIGURE OUT FOR SURE IF PDFFILE CAN NOT BE NULL (PLOTS WON'T PRINT TO SCREEN)
+
+    mt <- markerTable  ## rows are spots, cols are markers
+
+    if(!is.null(pdfFile)){
+        pdf(file=pdfFile, width=11,height=8.5)
+    }
+    ## add medians to data
+    mt <- mt %>% 
+            bind_rows(c(list(Sample=unique(mt$Sample),SPOT=NA),
+                        as.list(apply(mt[,3:ncol(mt)],2,median))
+                      ))
+    mt$SPOT <- as.character(mt$SPOT)
+    mt$SPOT[length(mt$SPOT)] <- "Median"
+
+    if(!is.null(funcMarker)){
+        fm <- paste0(",",funcMarker)
+        fmp <- paste0(funcMarker,"+")
+        fmn <- paste0(funcMarker,"-")
+        dat <- gather(mt, 3:ncol(mt),key="CellType",value="TotalDensity") %>% 
+                  mutate(FunctionalMarker=ifelse(grepl(fm,CellType),fmp,fmn),
+                         CellType=gsub(fm,"",CellType)
+                        ) %>% 
+                  as.tibble %>% 
+                  spread(FunctionalMarker, TotalDensity)
+        dat[[fmn]] <- dat[[fmn]] - dat[[fmp]]
+        dat <- gather(dat, 4:5, key="Functional",value="Density") 
+        dat$SPOT <- factor(dat$SPOT, levels=spotOrder)
+    } else {
+        ## manipulate mt to have Functional col that's all the same??
+        dat <- gather(mt, 3:ncol(mt), key="CellType", value="Density") %>%
+                mutate(Functional="X")
+    }
+
+    if(onePanel){
+        g <- ggplot(dat, aes(x=SPOT, y=Density, fill=Functional)) +
+               geom_bar(stat="identity",position="stack") + 
+               theme(legend.title=element_blank()) +
+               ylab("Density (counts/mm^2") ### TO DO: make this an option
+        if(len(unique(dat$Sample)) > 1){
+            g <- g + facet_wrap(CellType ~ Sample)
+        } else {
+            g <- g + facet_wrap(~CellType) + 
+                 labs(title=unique(dat$Sample)) 
+        }
+        if(is.null(funcMarker)){
+            g <- g + theme(legend.position="none")
+        }
+        print(g)
+    } else {
+        ### NOTE: WHEN PRINTED SEPARATELY Y-SCALES ARE DIFFERENT
+        for(marker in markers){
+            mdat <- dat %>% filter(CellType==marker)
+            g <- ggplot(mdat, aes(x=SPOT, y=Density, fill=Functional)) +
+                  geom_bar(stat="identity",position="stack") +
+                   theme(legend.title=element_blank()) +
+                   ylab("Density (counts/mm^2") + 
+                   labs(title=marker)
+            if(is.null(funcMarker)){
+                g <- g + theme(legend.position="none")
+            }
+            print(g)
+        }
+    }
+
+    if(!is.null(pdfFile)){
+        dev.off()
+    }
+}
+
+
+#' Plot total density of all bands around a tumor interface for one FOV
+#' 
+#' Plot total density of all bands around a tumor interface for one FOV
+#' @param markers          vector of markers/marker combos
+#' @param markerTable      tibble containing columns for [ FILL THIS IN LATER ] 
+#' @param ymax             maximum y value; by default, this value is dictated by the data
+#' @param funcMarker       functional marker to plot on top of every other marker [ FIX THIS ] 
+#' @param sampleColor      character string indicating HTML color to represent this particular sample
+#' @param sampleColorDark  a slightly darker shade of sampleColor, to be used for density of funcMarker+
+#' @param spotOrder        vector of FOVs in the order in which they should appear on the plot
+#' @param logPlot          plot density on log scale
+#' @param pdfFile          PDF file to which plot should be saved; default=NULL
+#' @export
+plotTotalDensity__OLD <- function(markers,markerTable,ymax,funcMarker=NULL,sampleColor="#f16913",
+                             sampleColorDark="#80380A",spotOrder=NULL,logPlot=FALSE,pdfFile=NULL){
+    mt <- markerTable
+
+    if(!is.null(pdfFile)){
+        pdf(file=pdfFile, width=11,height=8.5)
+    }
+
+    ddt <- NULL
+    for(mi in markers){
+        miF <- NULL
+
+        selectCols <- c("SampleID",mi)
+        if(!is.null(funcMarker)){
+            flog.debug("adding %s to marker list",funcMarker)
+            miF <- paste0(mi,",",funcMarker)
+            flog.debug(paste0("selecting cols: ",paste(selectCols,collapse=", ")))
+            selectCols <- c(selectCols, miF)
+        }
+
+        dt <- mt %>%
+              unite(SampleID,Sample,SPOT) %>%
+              dplyr::select(selectCols) %>%
+              remove_rownames %>%
+              as.data.frame %>%
+              column_to_rownames("SampleID")
+
+        ## transpose so markers are rows
+        dt=as.matrix(t(dt[spotOrder,,drop=F]))
+ 
+        ## if functional marker is given, calculate values of markers "neg" for
+        ## funcMarker by subtracting the value of markers "pos" from it (??)
+        if(nrow(dt) > 1){
+            ddt <- rbind(dt[2,],dt[1,]-dt[2,])
+            rownames(ddt) <- c(paste0(funcMarker,"+"),paste0(funcMarker,"-"))
+            ## add median to table
+            ddt <- cbind(ddt,Median=apply(ddt,1,median) )
+        } else {
+            ddt <- dt
+        }
+
+        eb <- mad(apply(dt,2,sum))
+        cols <- c(rep("#dddddd",len(ddt)-1),sampleColor)
+        nP <- ncol(ddt)
+
+        if(!logPlot) {
+            bb=barplot(ddt,ylim=c(0,maxRho),xaxt='n',beside=F,main=mi,ylab="Density (per mm^2)")
+
+            mdt=ddt
+            mdt[,-ncol(mdt)]=0
+            barplot(mdt,ylim=c(0,maxRho),xaxt='n',beside=F,add=T,
+               col=c(sampleColorDark,sampleColor))
+
+            text(bb+.5,-par()$usr[4]/40,colnames(ddt),xpd=T,srt=45,pos=2)
+            dMed=sum(ddt[,nP])
+            arrows(bb[nP],dMed-eb,bb[nP],dMed+eb,length=.1,angle=90,code=3) 
+        } else {
+            bb=barplot(ddt+1,ylim=c(1,1e4),las=2,beside=F,main=mi,
+                    ylab="Density (per mm^2)",log='y')
+            dMed=sum(ddt[,nP])
+            arrows(bb[nP],dMed-eb,bb[nP],dMed+eb,length=.1,angle=90,code=3)
+        }
+    }
+    if(!is.null(funcMarker)){
+        ## draw key
+        td=ddt
+        td[T]=0
+        bb=barplot(td,ylim=c(0,maxRho),xaxt='n',yaxt='n',beside=F,main="",
+                      ylab="",legend=T,args.legend=list(x=10,y=maxRho/2,cex=2))
+    }
+    if(!is.null(pdfFile)){
+        dev.off()
+    }
+
+}
+
+
+#' Plot density broken down by distance from tumor interface 
+#' 
+#' Given a vector of markers and a tibble containing columns for Density and 
+#' Band, generate a bar plot for each FOV, with one bar per Band, colored by 
+#' marker
+#'
+#' @param density    tibble with columns for Density, Band and CellType
+#' @param sampleName name of sample from which the FOVs came from
+#' @param markers    vector of markers/marker combos
+plotDensityByBand <- function(density,sampleName,markers){
+    g <- ggplot(density, aes(x=Band,y=Density)) +
+              geom_bar(aes(fill = CellType),
+                       stat="identity",
+                       position=position_stack()) +
+              theme(legend.position="bottom",
+                    legend.title=element_blank(),
+                     axis.title.x=element_blank(),
+                     axis.text.x=element_blank(),
+                     axis.ticks.x=element_blank(),
+                     panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank()) +
+              facet_wrap(~SPOT) +
+              ggtitle(sampleName) +
+              ylab("Density (per mm^2)") +
+              scale_fill_manual(values = getMarkerColors(markerColors=NULL,markerCombos=markers)) +
+              geom_vline(aes(xintercept = 20.5), linetype=3)
+    return(g)
+}
+
+#' Plot density of each FOV for one sample
 #'
 #' @param dataFile                  *.rda file containing Halo data for a single sample
 #' @param annotationsDir            directory containing *.annotations files, XML files of boundary
@@ -687,32 +939,47 @@ plotDensity <- function(dataFile, annotationsDir, cellTypeFile, cellTypeName,
                          writeCSVfiles=TRUE, haloInfiltrationDir,maxG,outDir, byBand=FALSE, bandWidth=10,
                          maxDistanceFromInterface=200){
 
+    ### TO DO: 
+    #     1. FIGURE OUT HOW TO ACCEPT DATA FOR MULTIPLE SAMPLES (NEED DATAFILE AND ANNOTATIONS
+    #        DIR FOR EACH SAMPLE)
+
     if(!byBand){
         ## for plotting TOTAL density around tumor interface, create one band/bin
-        interfaceBins = c(-200,200)
+        interfaceBins = c(-maxDistanceFromInterface,0,maxDistanceFromInterface)
     } else {
-        interfaceBins = (-maxDistanceFromInterface:maxDistanceFromInterface)*bandWidth
+        mdfi <- maxDistanceFromInterface/10
+        interfaceBins = (-mdfi:mdfi)*bandWidth
     }
     aFiles <- file.path(annotationsDir,dir(annotationsDir)[grep("\\.annotations$",dir(annotationsDir))])
 
     rho <- NULL
-    ## get density and area
+    ## get density and area of interface stats
     flog.debug("calculating interface stats")
     is <- calculateInterfaceStats(aFiles, dataFile, cellTypeFile, cellTypeName,
                                  fovBB, pad, haloInfiltrationDir, writeCSVfiles=writeCSVfiles,
                                  funcMarker=funcMarker,maxG=maxG,outDir=outDir,
-                                 interfaceBins=interfaceBins)
+                                 interfaceBins=interfaceBins,statsByBand=byBand)
+
     if(!is.null(is$density)){
-        rho <- is$density %>% select(CellType,Sample,SPOT,Total)
+        if(byBand){
+            dropCols <- names(is$density)[grep("Count",names(is$density))]
+            rho <- is$density %>% select(-one_of(dropCols)) 
+        } else {
+            rho <- is$density %>% select(CellType,Sample,SPOT,Total)
+        }
     }
 
-    flog.debug("calculating stats for FOVs without tumor boundaries")
-    fs <- calculateFOVStats(aFiles, dataFile, cellTypeFile, cellTypeName, 
+    ## if calculating total density, calc density of entire FOV for those without
+    ## any tumor boundaries (e.g., complete response samples)
+    if(!byBand){
+        flog.debug("calculating stats for FOVs without tumor boundaries")
+        fs <- calculateFOVStats(aFiles, dataFile, cellTypeFile, cellTypeName, 
                             fovBB, pad, maxG, writeCSVfiles=writeCSVfiles,
                             funcMarker=funcMarker,outDir)
 
-    if(!is.null(fs$density)){    
-        rho <- bind_rows(rho,fs$density)
+        if(!is.null(fs$density)){    
+            rho <- bind_rows(rho,fs$density)
+        }
     }
     if(is.null(rho)){
         return()
@@ -724,81 +991,30 @@ plotDensity <- function(dataFile, annotationsDir, cellTypeFile, cellTypeName,
         rho <- removeExclusions(rho, exclude_sample_fov=exclude_sample_fov)
     }
 
-    ## get max density
-    mt     <- rho %>% dplyr::select(CellType,Sample,SPOT,Total) %>% spread(CellType,Total)
-    if(is.null(ymax)){
-        maxRho <- mt %>% dplyr::select(-Sample,-SPOT) %>% summarize_all(funs(max)) %>% max
-    } else {
-        maxRho <- ymax
-    }
-    flog.debug("maxRho = %s",maxRho)
-    sampleName <- mt$Sample[1]
-    flog.debug("sorting by %s",sortByMarker)
-    sortedByMarker <- cc(sampleName,mt %>% arrange(get(sortByMarker)) %>% pull(SPOT))
+    sampleName <- rho$Sample[1]
     markers    <- scan(cellTypeFile, "")
 
-    pdf(file=pdfFile, width=11,height=8.5)
-
-    ddt <- NULL
-    for(mi in markers){
-        miF <- NULL
-
-        selectCols <- c("SampleID",mi)
-        if(!is.null(funcMarker)){
-            flog.debug("adding %s to marker list",funcMarker)
-            miF <- paste0(mi,",",funcMarker)
-            flog.debug(paste0("selecting cols: ",paste(selectCols,collapse=", ")))
-            selectCols <- c(selectCols, miF)
-        }
-
-        dt <- mt %>%
-              unite(SampleID,Sample,SPOT) %>%
-              dplyr::select(selectCols) %>%
-              remove_rownames %>%
-              as.data.frame %>%
-              column_to_rownames("SampleID")
-
-        ## transpose so markers are rows
-        dt=as.matrix(t(dt[sortedByMarker,,drop=F]))
-
-        ## if functional marker is given, calculate values of markers "neg" for
-        ## funcMarker by subtracting the value of markers "pos" from it (??)
-        if(nrow(dt) > 1){
-            ddt <- rbind(dt[2,],dt[1,]-dt[2,])
-            rownames(ddt) <- c(paste0(funcMarker,"+"),paste0(funcMarker,"-"))
-            ddt <- cbind(ddt,Median=apply(ddt,1,median) )
+    if(!byBand){
+        mt <- rho %>% dplyr::select(CellType,Sample,SPOT,Total) %>% spread(CellType,Total)
+        if(is.null(ymax)){
+            maxRho <- mt %>% dplyr::select(-Sample,-SPOT) %>% summarize_all(funs(max)) %>% max
         } else {
-            ddt <- dt
+            maxRho <- ymax
         }
-
-        eb <- mad(apply(dt,2,sum))
-        cols <- c(rep("#dddddd",len(ddt)-1),sampleColor)
-        nP <- ncol(ddt)
-
-        if(!logPlot) {
-            bb=barplot(ddt,ylim=c(0,maxRho),xaxt='n',beside=F,main=mi,ylab="Density (per mm^2)")
-
-            mdt=ddt
-            mdt[,-ncol(mdt)]=0
-            barplot(mdt,ylim=c(0,maxRho),xaxt='n',beside=F,add=T,
-                col=c(sampleColorDark,sampleColor))
-
-            text(bb+.5,-par()$usr[4]/40,colnames(ddt),xpd=T,srt=45,pos=2)
-            dMed=sum(ddt[,nP])
-            arrows(bb[nP],dMed-eb,bb[nP],dMed+eb,length=.1,angle=90,code=3)
-        } else {
-            bb=barplot(ddt+1,ylim=c(1,1e4),las=2,beside=F,main=mi,
-                    ylab="Density (per mm^2)",log='y')
-            dMed=sum(ddt[,nP])
-            arrows(bb[nP],dMed-eb,bb[nP],dMed+eb,length=.1,angle=90,code=3)
-        }
-    }
-    if(!is.null(funcMarker)){
-        ## draw key
-        td=ddt
-        td[T]=0
-        bb=barplot(td,ylim=c(0,maxRho),xaxt='n',yaxt='n',beside=F,main="",
-                      ylab="",legend=T,args.legend=list(x=10,y=maxRho/2,cex=2))
+        flog.debug("maxRho = %s",maxRho)
+        flog.debug("sorting by %s",sortByMarker)
+        spotOrder <- mt %>% arrange(get(sortByMarker)) %>% pull(SPOT)
+        plotTotalDensity(markers,markerTable,funcMarker=funcMarker,sampleColor=sampleColor,
+                          sampleColorDark=sampleColorDark,spotOrder=spotOrder,logPlot=logPlot,
+                          onePanel=onePanel,pdfFile=NULL)
+    } else {
+        mt <- rho %>%
+                gather(key="Band",value="Density",names(rho)[2:(ncol(rho)-2)]) %>%
+                spread(CellType,Density)
+        dat <- rho %>% 
+                gather(key="Band",value="Density",names(rho)[2:(ncol(rho)-2)])
+        p <- plotDensityByBand(dat, sampleName, c(markers,paste(markers,funcMarker,sep=",")))
+        print(p)
     }
 
     dev.off()

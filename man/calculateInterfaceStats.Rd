@@ -7,7 +7,7 @@
 calculateInterfaceStats(aFiles, dataFile, cellTypeFile, cellTypeName,
   fovBoundingBox, pad, haloInfiltrationDir, funcMarker = NULL,
   writeCSVfiles = TRUE, maxG = 5, outDir = NULL,
-  interfaceBins = (-20:20) * 10)
+  interfaceBins = (-20:20) * 10, statsByBand = FALSE)
 }
 \arguments{
 \item{aFiles}{a vector of Halo boundary annotation files, with 
@@ -40,6 +40,9 @@ default=TRUE}
 
 \item{interfaceBins}{a vector of distances from tumor interface in which cells will be binned; 
 default=(-20:20)*10}
+
+\item{statsByBand}{logical; return stats broken down by interface bands (bins) as opposed to total
+stats; default=FALSE}
 }
 \value{
 a list containing two tables: 'density' and 'area'
