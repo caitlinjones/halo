@@ -4,20 +4,15 @@
 \alias{plotDensity}
 \title{Plot density of each FOV for one sample}
 \usage{
-plotDensity(dataFile, annotationsDir, cellTypeFile, cellTypeName, fovBB, pad,
+plotDensity(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, fovBB, pad,
   pdfFile, ymax = NULL, logPlot = F, funcMarker = "KI67",
   sortByMarker = "CD3", sampleColor = "#f16913",
   sampleColorDark = "#80380A", exclude_sample_fov = NULL,
   exclude_sample_marker = NULL, writeCSVfiles = TRUE, haloInfiltrationDir,
   maxG, outDir, byBand = FALSE, bandWidth = 10,
-  maxDistanceFromInterface = 200)
+  maxDistanceFromInterface = 200, densityFiles = NULL)
 }
 \arguments{
-\item{dataFile}{*.rda file containing Halo data for a single sample}
-
-\item{annotationsDir}{directory containing *.annotations files, XML files of boundary
-annotations from Halo}
-
 \item{cellTypeFile}{a text file with each line containing a cell type marker; may be
 marker combinations delimited by commas}
 
@@ -65,6 +60,11 @@ default=FALSE}
 default=10}
 
 \item{maxDistanceFromInterface}{include only those cells within this distance from tumor interface}
+
+\item{dataFile}{*.rda file containing Halo data for a single sample}
+
+\item{annotationsDir}{directory containing *.annotations files, XML files of boundary
+annotations from Halo}
 }
 \description{
 Plot density of each FOV for one sample

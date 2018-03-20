@@ -30,7 +30,8 @@ usage <- function(){
 
 pp <- NULL
 
-## get all params from manifest if it exists, otherwise get them from command line
+## eventually set up defaults for everything, then allow everything to be
+## passed on command line; for now require manifest
 print(args$manifest)
 if(!is.null(args$manifest)){
     pp <- initializeProject(args$manifest,type="spatial_plots")
@@ -44,17 +45,47 @@ if(!is.null(pp)){
 }
 
 
-flog.info("Plotting cell type locations")
-pdfFile <- gsub("\\.rda","_cellTypeLocations.pdf",basename(pp$data_file))
-plotCellTypeLocations(pp$data_file, pp$annotations_dir, pp$cell_types_file, pp$fov_bb, pp$plot_bb,
-                      pp$boundary_colors, pp$cell_type_colors, pad=pp$pad, pdfFile=pdfFile)
+#flog.info("Plotting cell type locations")
+#pdfFile <- gsub("\\.rda","_cellTypeLocations.pdf",basename(pp$data_file))
+#plotCellTypeLocations(pp$data_file, pp$annotations_dir, pp$cell_types_file, pp$fov_bb, pp$plot_bb,
+#                      pp$boundary_colors, pp$cell_type_colors, pad=pp$pad, pdfFile=pdfFile)
 
 flog.info("Plotting total density")
-pdfFile <- gsub("\\.rda","_totalDensity.pdf",basename(pp$data_file))
-plotDensity(pp$data_file, pp$annotations_dir, pp$cell_types_file, pp$cell_type_name, 
-            pp$fov_bb, pp$pad, pdfFile, logPlot=pp$log_plot,
-            funcMarker=pp$func_marker, sampleColor=pp$sample_color, 
-            sampleColorDark=pp$sample_color_dark, exclude_sample_fov=pp$exclude_sample_fov, 
-            sortByMarker=pp$sort_by_marker, ymax=pp$ymax, 
-            haloInfiltrationDir=pp$halo_infiltration_dir, outDir=pp$out_dir, maxG=pp$max_g)
+
+if(len(pp$density_files) > 1 | len(pp$data_file) > 1){
+    pdfFile <- gsub("\\.txt","_totalDensity.pdf",basename(args$manifest))
+} else if(len(pp$data_file) == 1){
+    pdfFile <- gsub("\\.rda","_totalDensity.pdf",basename(pp$data_file))
+} else if(len(pp$density_files) == 1){
+    pdfFile <- gsub("\\.rda","_totalDensity.pdf",basename(pp$density_files))
+} else {
+    usage()
+}
+
+plotDensity(pp$data_file, 
+            pp$annotations_dir, 
+            pp$cell_types_file, 
+            pp$cell_type_name, 
+            pp$fov_bb, 
+            pp$pad, 
+            pdfFile, 
+            densityFiles=pp$density_files,
+            logPlot=pp$log_plot,
+            funcMarker=pp$func_marker, 
+            funcPosColor=pp$functional_pos_color, 
+            funcNegColor=pp$functional_neg_color,
+            sampleColor=pp$sample_color, 
+            sampleColorDark=pp$sample_color_dark, 
+            exclude_sample_fov=pp$exclude_sample_fov, 
+            sortByMarker=pp$sort_by_marker, 
+            sampleOrder=pp$sample_order,
+            ymax=pp$ymax, 
+            outDir=pp$out_dir,
+            writeCSVfiles=pp$write_csv_files, 
+            maxG=pp$max_g,
+            byBand=pp$by_band,
+            bandWidth=pp$band_width, 
+            maxDistanceFromInterface=pp$max_distance_from_interface,
+            singlePanelPlot=pp$single_panel_plots,
+            includeSortByMarker=pp$include_sort_by_marker)
 

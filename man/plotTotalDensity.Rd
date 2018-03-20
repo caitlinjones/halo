@@ -2,29 +2,45 @@
 % Please edit documentation in R/melanoma_spatial.R
 \name{plotTotalDensity}
 \alias{plotTotalDensity}
-\title{Plot total density of all bands around a tumor interface for one FOV}
+\title{Plot density for each marker, broken down by FOV}
 \usage{
-plotTotalDensity(markers, markerTable, ymax, funcMarker = NULL,
+plotTotalDensity(markers, markerTable, funcMarker = NULL,
+  funcPosColor = "grey35", funcNegColor = "grey50",
   sampleColor = "#f16913", sampleColorDark = "#80380A", spotOrder = NULL,
-  logPlot = FALSE)
+  sampleOrder = NULL, onePanel = TRUE, pdfFile = NULL)
 }
 \arguments{
-\item{markers}{vector of markers/marker combos}
+\item{markers}{vector of markers/marker combinations to be plotted; there will
+be one plot per marker}
 
-\item{markerTable}{tibble containing columns for [ FILL THIS IN LATER ]}
+\item{markerTable}{tibble containing columns for Sample, SPOT, and a column of densities
+for each marker}
 
-\item{ymax}{maximum y value; by default, this value is dictated by the data}
+\item{funcMarker}{a functional marker that is included in the marker combos in markerTable;
+for each marker, there should be a combo that includes the functional marker
+(indicating that cell type is positive for this marker) and one that does
+not (indicating that the cell type may or may not be positive for this marker);
+default=NULL;}
 
-\item{funcMarker}{functional marker to plot on top of every other marker [ FIX THIS ]}
+\item{sampleColor}{all bars will be colored gray except for the Median bar, which will be
+this color; default=#f16913}
 
-\item{sampleColor}{character string indicating HTML color to represent this particular sample}
+\item{sampleColorDark}{a darker version of sampleColor (or really any color of your choosing)
+that will represent the median of cells positive for the funcMarker;
+default=#80380A}
 
-\item{sampleColorDark}{a slightly darker shade of sampleColor, to be used for density of funcMarker+}
+\item{spotOrder}{a vector of FOV numbers indicating the order in which FOVs should be in 
+the plot(s); default=NULL}
 
-\item{spotOrder}{vector of FOVs in the order in which they should appear on the plot}
+\item{sampleOrder}{a vector indicating the order in which samples should appear}
 
-\item{logPlot}{plot density on log scale}
+\item{onePanel}{if plotting multiple markers, logical indicating all plots should be on one
+panel; default=TRUE}
+
+\item{pdfFile}{if given, plot(s) will be written to this file; default=NULL}
+
+\item{logPlot}{logical indicating that density should be plotted on log scale; default=FALSE}
 }
 \description{
-Plot total density of all bands around a tumor interface for one FOV
+Bar plot(s) showing density of a marker in each FOV of one sample
 }
