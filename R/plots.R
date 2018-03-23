@@ -411,6 +411,14 @@ plotCellTypeLocations <- function(dataFile, annotationsDir, cellTypesFile, fovBB
             mutate(X=(XMax+XMin)/2,Y=-(YMax+YMin)/2) %>%
             dplyr::select(Sample,SPOT,UUID,X,Y,Marker,Value) %>%
             spread(Marker,Value)
+
+         bbFOV <- getBoundingBoxL(ds)
+         bbPlot <- list(X0=bbFOV$X0-500, X1=bbFOV$X1+500, Y0=bbFOV$Y0-500, Y1=bbFOV$Y1+500) 
+         bbData <- bbFOV
+         if(pad > 0){
+           bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
+         }       
+ 
         flog.debug("  plotting...")
         ## bbPlot = black solid (entire plot)
         ## bbFOV0 = gray solid  (fov max/min from Halo)

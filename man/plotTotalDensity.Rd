@@ -7,7 +7,8 @@
 plotTotalDensity(markers, markerTable, funcMarker = NULL,
   funcPosColor = "grey35", funcNegColor = "grey50",
   sampleColor = "#f16913", sampleColorDark = "#80380A", spotOrder = NULL,
-  sampleOrder = NULL, onePanel = TRUE, pdfFile = NULL)
+  sampleOrder = NULL, onePanel = TRUE, pdfFile = NULL,
+  sortByMarker = NULL, includeSortByMarker = FALSE)
 }
 \arguments{
 \item{markers}{vector of markers/marker combinations to be plotted; there will

@@ -5,12 +5,13 @@
 \title{Plot density of each FOV for one sample}
 \usage{
 plotDensity(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, fovBB, pad,
-  pdfFile, ymax = NULL, logPlot = F, funcMarker = "KI67",
-  sortByMarker = "CD3", sampleColor = "#f16913",
-  sampleColorDark = "#80380A", exclude_sample_fov = NULL,
-  exclude_sample_marker = NULL, writeCSVfiles = TRUE, haloInfiltrationDir,
-  maxG, outDir, byBand = FALSE, bandWidth = 10,
-  maxDistanceFromInterface = 200, densityFiles = NULL)
+  pdfFile, logPlot = F, funcMarker = NULL, funcPosColor = "grey50",
+  funcNegColor = "grey35", sampleColor = "#f16913",
+  sampleColorDark = "#80380A", sortByMarker = "CD3", sampleOrder = NULL,
+  exclude_sample_fov = NULL, exclude_sample_marker = NULL,
+  writeCSVfiles = TRUE, maxG = 5, outDir, byBand = FALSE,
+  bandWidth = 10, maxDistanceFromInterface = 200, densityFiles = NULL,
+  singlePanelPlots = TRUE, includeSortByMarker = TRUE, ymax = 4000)
 }
 \arguments{
 \item{cellTypeFile}{a text file with each line containing a cell type marker; may be
@@ -25,18 +26,16 @@ for FOVs}
 
 \item{pdfFile}{output PDF file}
 
-\item{ymax}{maximum y value; by default, this value is dictated by the data}
-
 \item{logPlot}{logical; when set to TRUE, plot density per mm^2; default=FALSE}
 
 \item{funcMarker}{character string of functional marker to plot on top of every other marker}
 
-\item{sortByMarker}{sort FOVs by density of this marker (cell type)in ascending order;
-default=CD3}
-
 \item{sampleColor}{character string indicating HTML color to represent this particular sample}
 
 \item{sampleColorDark}{a slightly darker shade of sampleColor, to be used for density of funcMarker+}
+
+\item{sortByMarker}{sort FOVs by density of this marker (cell type)in ascending order;
+default=CD3}
 
 \item{exclude_sample_fov}{list where names are sample names and values are vectors of FOV to be
 removed from data before any calculations}
@@ -47,9 +46,7 @@ should be removed from data before any calculations}
 \item{writeCSVfiles}{logical; write CSV files, one of density values and one of area values; 
 default=TRUE}
 
-\item{haloInfiltrationDir}{directory containing Halo Infiltration data (csv, plot files)}
-
-\item{maxG}{???}
+\item{maxG}{maximum factor of 10 to use for generating random points on grid [ REWORD??? ]}
 
 \item{outDir}{if writeCSVfiles=T, directory to which these files will be written#' @return nothing}
 
@@ -61,10 +58,14 @@ default=10}
 
 \item{maxDistanceFromInterface}{include only those cells within this distance from tumor interface}
 
+\item{ymax}{maximum y value; by default, this value is dictated by the data}
+
 \item{dataFile}{*.rda file containing Halo data for a single sample}
 
 \item{annotationsDir}{directory containing *.annotations files, XML files of boundary
 annotations from Halo}
+
+\item{haloInfiltrationDir}{directory containing Halo Infiltration data (csv, plot files)}
 }
 \description{
 Plot density of each FOV for one sample

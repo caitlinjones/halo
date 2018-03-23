@@ -6,7 +6,7 @@
 \usage{
 calculateInterfaceStats(aFiles, dataFile, cellTypeFile, cellTypeName,
   fovBoundingBox, pad, haloInfiltrationDir, funcMarker = NULL,
-  writeCSVfiles = TRUE, maxG = 5, outDir = NULL,
+  sortByMarker = NULL, writeCSVfiles = TRUE, maxG = 5, outDir = NULL,
   interfaceBins = (-20:20) * 10, statsByBand = FALSE)
 }
 \arguments{
@@ -30,6 +30,9 @@ and maximum coordinates of the FOV to be plotted}
 
 \item{funcMarker}{this marker will be added to all markers in cellTypeFile in order to
 compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]}
+
+\item{sortByMarker}{marker to sort by; default=NULL and can be left NULL if already in 
+cellTypeFile}
 
 \item{writeCSVfiles}{logical indicating whether to write density and area tables to file; 
 default=TRUE}

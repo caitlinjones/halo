@@ -137,6 +137,18 @@ getBoundingBoxL<-function(spObj) {
     list(X0=min(spObj$X),Y0=min(spObj$Y),X1=max(spObj$X),Y1=max(spObj$Y))
 }
 
+#' Get min and max X and Y coordinates of a FOV
+#' 
+#' @param  spObj  spot object(?); data frame containing Xmin,Xmax and Ymin,Ymax 
+#'                coordinates of all cells in a FOV
+#' @return list where X0 = minimum X, X1 = maximum X, and same for Y 
+getBoundingBox <- function(haloObj){
+    list(X0=min(haloObj$XMin),
+         X1=max(haloObj$XMax),
+         Y1=-min(haloObj$YMin),
+         Y0=-max(haloObj$YMax))
+}
+
 #' Replace Min/Max X and Y coordinates from Halo with cell midpoints
 #'
 #' Given a tibble containing columns XMax, Xmin, YMax, YMin, replace

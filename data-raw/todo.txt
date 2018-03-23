@@ -1,7 +1,0 @@
-write script to read text files and save a R data file with a dataframe like this:
-
-dataSet	Sample	md5	processedFile	rawFiles	
-Melanoma_IL2_v1	CR	xxxxx	/home/byrne/halo/data/melanoma/Melanoma_IL2_v1/objectAnalysisFiles/CR_ObjectAnalysis...R	/path/to/csv/files
-Melanoma_IL2_v1	PR	xxxxx	/home/byrne/halo/data/melanoma/Melanoma_IL2_v1/objectAnalysisFiles/PR_ObjectAnalysis...R	/path/to/csv/files
-...
-Hodgkins	Samp1	xxxx	/path/to/hodgkins
