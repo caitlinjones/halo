@@ -88,7 +88,6 @@ calculateBandAreas <- function(allBoundaries,maxG=5,bbData,interfaceBins) {
     if(is.null(interfaceBins)){
         interfaceBins <- (-20:20)*10
     }
-print(interfaceBins)
     tumB <- allBoundaries$tumB
     excB <- allBoundaries$excB
 
@@ -192,11 +191,9 @@ joinBandArea<-function(bdat,bandArea) {
 #' @param aFiles              a vector of Halo boundary annotation files, with 
 #'                            '.annotations' extension in XML format
 #' @param data                Halo data for one sample loaded from a *.rda 
-#' @param cellTypeFile        file containing cell types to be calculated; each line
-#'                            is one cell type and each cell type can be either a single
-#'                            marker name or a comma-separated list of markers
+#' @param markerSet           a vector markers to calculate density for
 #' @param cellTypeName        a name to represent the cell types in marker file
-#' @param funcMarker          this marker will be added to all markers in cellTypeFile in order to
+#' @param funcMarker          this marker will be added to all markers in markerSet in order to
 #'                            compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]
 #' @param fovBB               a list with four elements: X0, X1, Y0, Y1, representing the minimum
 #'                            and maximum coordinates of the FOV to be plotted
@@ -303,8 +300,8 @@ calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
   }
 
   if(writeCSVfiles){
-    write_csv(as.data.frame(areass), cc(sampleName, "interfaceStatsV3_Area.csv"))
-    write_csv(as.data.frame(rhos), cc(sampleName, "interfaceStatsV3_Density.csv"))
+    write_csv(as.data.frame(areass), file.path(outDir,cc(sampleName, "_area.csv")))
+    write_csv(as.data.frame(rhos), file.path(outDir,cc(sampleName, "_density.csv")))
   }
 
   return(list(density=rhos, area=areass))
@@ -605,7 +602,7 @@ densityBoxPlots <- function(markers, density, sampleOrder=NULL, starSize=8, pdfF
     plotTheme = theme(legend.title=element_blank(),
                      axis.text=element_text(size=8),
                      axis.ticks = element_blank(),
-                     strip.text.x = element_text(face="bold", size=12),
+                     strip.text.x = element_text(face="bold", size=12, margin = margin(.4, .2, .4, .2, "cm")),
                      strip.text.y = element_text(margin = margin(.4, .2, .4, .2, "cm")),
                      strip.placement = "outside",
                      plot.background = element_blank(),
@@ -715,42 +712,32 @@ addMedianErrorBarValues <- function(dat){
 
 }
 
-#' Plot density for each marker, broken down by FOV
-#' 
-#' Bar plot(s) showing density of a marker in each FOV of one sample
+#' Build bar plot for total cell type density
 #'
-#' @param markers      vector of markers/marker combinations to be plotted; there will
-#'                     be one plot per marker
-#' @param markerTable  tibble containing columns for Sample, SPOT, and a column of densities
-#'                     for each marker
-#' @param funcMarker   a functional marker that is included in the marker combos in markerTable;
-#'                     for each marker, there should be a combo that includes the functional marker
-#'                     (indicating that cell type is positive for this marker) and one that does
-#'                     not (indicating that the cell type may or may not be positive for this marker);
-#'                     default=NULL;
-#' @param sampleColor  all bars will be colored gray except for the Median bar, which will be
-#'                     this color; default=#f16913
-#' @param sampleColorDark  a darker version of sampleColor (or really any color of your choosing)
-#'                         that will represent the median of cells positive for the funcMarker;
-#'                         default=#80380A
-#' @param spotOrder    a vector of FOV numbers indicating the order in which FOVs should be in 
-#'                     the plot(s); default=NULL
-#' @param sampleOrder  a vector indicating the order in which samples should appear
-#' @param logPlot      logical indicating that density should be plotted on log scale; default=FALSE
-#' @param onePanel     if plotting multiple markers, logical indicating all plots should be on one
-#'                     panel; default=TRUE
-#' @param pdfFile      if given, plot(s) will be written to this file; default=NULL
-plotTotalDensity <- function(markers, markerTable,funcMarker=NULL,funcPosColor="grey35",
-                             funcNegColor="grey50",sampleColor="#f16913",
-                             sampleColorDark="#80380A",spotOrder=NULL,sampleOrder=NULL,
-                             onePanel=TRUE,pdfFile=NULL,sortByMarker=NULL,includeSortByMarker=FALSE){
+#' Build bar plot for total cell type density
+#'
+#' @param  dat                 tibble containing all info needed for plotting [ TO DO: FILL IN EXACTLY WHAT'S NEEDED ]
+#' @param  plotPer             generate plot per ['markerSet'|'marker'|'sample'|'sample+marker]; default='markerSet' 
+#' @param  funcMarker          marker to be indicated as either positive or negative for each cell type
+#' @param  funcNegColor        hex color indicating functional marker is negative in that cell type
+#' @param  funcPosColor        hex color indicating functional marker is positive in that cell type
+#' @param  sampleColor         vector of colors named by the sample which it will represent; this color will only
+#'                             appear on the median bars
+#' @param  sampleColorDark     vector of colors named by sample, to represent density of cells that are positive
+#'                             for the functional marker, if one is given
+#' @param  consistentYScaling  logical; when onePanel=FALSE, set this parameter to FALSE in order to scale separate 
+#'                             plots individually; default=TRUE
+#' @return list of ggplots to be printed
+getTotalDensityPlots <- function(dat, markerList, plotPer='markerSet', funcMarker=NULL, funcPosColor="grey35",
+                             funcNegColor="grey50", sampleColor="#f16913", sampleColorDark="#80380A",
+                             consistentYScaling=TRUE){
 
     ## set up theme
     plotTheme = theme(legend.title=element_blank(),
                      axis.text=element_text(size=8),
                      axis.text.x = element_text(angle=45, hjust=1),
                      axis.ticks = element_blank(),
-                     strip.text.x = element_text(face="bold", size=12),
+                     strip.text.x = element_text(face="bold", size=12, margin=margin(.4, .2, .4, .2, "cm")),
                      strip.text.y = element_text(margin = margin(.4, .2, .4, .2, "cm")),
                      strip.placement = "outside",
                      plot.background = element_blank(),
@@ -761,15 +748,149 @@ plotTotalDensity <- function(markers, markerTable,funcMarker=NULL,funcPosColor="
                      legend.position = "right"
                      )
 
+    ymax <- ifelse(consistentYScaling, max(dat$Density), NULL)
+
+
+    #####
+    ## generate plot(s)
+    #####
+    plotList <- list()
+
+    dplot <- function(dat,funcMarker=NULL,ymax=NULL){
+      clrs <- dat$Colors
+      names(clrs) <- clrs
+
+      ## remove sample name from SampleSpot for x axis labels
+      xlbls <- gsub(".*_","",dat$SampleSpot)
+      names(xlbls) <- dat$SampleSpot
+
+      ## set up temporary legend labels in case there is no functional marker
+      legendLabels <- c("TMP","TMP")
+      if(!is.null(funcMarker)){
+        legendLabels <- paste0(funcMarker,c("-","+"))
+      }
+      g <- ggplot(dat, aes(x=as.factor(SampleSpot2), y=Density,
+                        fill=factor(Colors,levels=c(funcNegColor,funcPosColor,sampleColor,sampleColorDark)))) +
+                        geom_bar(stat="identity",position="stack") +
+                        plotTheme +
+                        xlab("FOV") +
+                        ylab("Density (counts/mm^2)") +
+                        scale_fill_manual(values=clrs,
+                                          breaks=c(funcNegColor,funcPosColor),
+                                          labels=legendLabels) +
+                        scale_x_discrete(labels=xlbls) +
+                        geom_errorbar(aes(ymin=ymin,ymax=ymax))
+      if(is.null(funcMarker)){
+          g <- g + theme(legend.position="none")
+      }
+      if(!is.null(ymax)){
+         g <- g + scale_y_continuous(limits = c(0,ymax))
+      }
+      return(g)   
+    }
+
+    if(plotPer %in% c('markerSet','marker','sample')){
+        flog.debug("building one plot per %s",plotPer)
+        if(plotPer == 'markerSet'){
+            for(mn in names(markerList)){
+print(paste0('making plot for markerSet ',mn))
+                mdat <- dat %>% filter(CellType %in% markerList[[mn]])
+                g <- dplot(mdat, funcMarker=funcMarker, ymax=ymax)
+                g <- g + facet_grid(CellTypeLabels ~ Sample2, scales="free_x", switch="y")
+                plotList[[mn]] <- g
+            }
+        } else if(plotPer == 'sample') {
+            for(s in unique(dat$Sample)){
+                mdat <- dat %>% filter(Sample==s)
+print(paste0('making plot for sample ',s))
+                g <- dplot(mdat, funcMarker=funcMarker, ymax=ymax)
+                g <- g + facet_wrap(~CellType, scales="free_x", strip.position=c("top")) + 
+                     labs(title=s) + 
+                     theme(strip.text.x = element_text(margin = margin(.4, .2, .4, .2, "cm"))) 
+                plotList[[s]] <- g
+            }
+        } else { ## plotPer == 'marker'
+            for(m in unlist(markerList)){
+                if(len(grep(paste0(",",funcMarker),m) > 0)){ next }
+print(paste0('making plot for marker ',m))
+                mdat <- dat %>% filter(CellType==m)
+                g <- dplot(mdat, funcMarker=funcMarker, ymax=ymax)
+                g <- g + facet_wrap(~Sample, scales="free_x", strip.position=c("top")) + 
+                     labs(title=m)
+                plotList[[m]] <- g
+            }
+        }
+    } else {
+        for(marker in unique(dat$CellType)){
+            for(samp in unique(dat$Sample)){
+print(paste0('making plot for marker ',marker,', sample ',samp))
+                mdat <- dat %>% filter(CellType==marker,Sample==samp)
+                flog.debug("printing each marker individually")
+                g <- dplot(mdat,funcMarker=funcMarker,ymax=ymax) + 
+                     labs(title=paste0(samp, "\n", marker))
+                if(is.null(funcMarker)){
+                    g <- g + theme(legend.position="none")
+                }
+                plotList[[samp]][[marker]] <- g
+            }
+        }
+    }
+    return(plotList)
+}
+
+#' Plot density for each marker, broken down by FOV
+#' 
+#' Bar plot(s) showing density of a marker in each FOV of one sample
+#'
+#' @param markerList          vector of markers/marker combinations to be plotted; there will
+#'                            be one plot per marker
+#' @param density             tibble containing columns for Sample, SPOT, CellType, Total
+#' @param funcMarker          a functional marker that is included in the marker combos in markerTable;
+#'                            for each marker, there should be a combo that includes the functional marker
+#'                            (indicating that cell type is positive for this marker) and one that does
+#'                            not (indicating that the cell type may or may not be positive for this marker);
+#'                            default=NULL;
+#' @param sampleColor         all bars will be colored gray except for the Median bar, which will be
+#'                            this color; default=#f16913
+#' @param sampleColorDark     a darker version of sampleColor (or really any color of your choosing)
+#'                            that will represent the median of cells positive for the funcMarker;
+#'                            default=#80380A
+#' @param spotOrder           a vector of FOV numbers indicating the order in which FOVs should be in 
+#'                            the plot(s); default=NULL
+#' @param sampleOrder         a vector indicating the order in which samples should appear
+#' @param logPlot             logical indicating that density should be plotted on log scale; default=FALSE
+#' @param boxPlots            logical indicating whether to create a box plot for each cell type showing 
+#'                            the mean difference between samples; default=TRUE
+#' @param consistentYScaling  logical; when onePanel=FALSE, set this parameter to FALSE in order to scale separate 
+#' @param pdfFile             if given, plot(s) will be written to this file; default=NULL
+plotTotalDensity <- function(markerList, rho, funcMarker=NULL, funcPosColor="grey35",
+                             funcNegColor="grey50", sampleColor="#f16913", sampleColorDark="#80380A", 
+                             spotOrder=NULL, sampleOrder=NULL, plotPer='markerSet', pdfFile=NULL,
+                             sortByMarker=NULL, includeSortByMarker=FALSE, boxPlots=TRUE,
+                             consistentYScaling=TRUE){
+
+    #if(boxPlots){
+    #    if(!is.null(pdfFile)){
+    #        bpdfFile <- gsub(".pdf","_boxplots.pdf",pdfFile)
+    #        pdf(bpdfFile,height=8,width=8)
+    #    }
+
+    #    densityBoxPlots(markers, rho, sampleOrder)
+
+     #   if(!is.null(pdfFile)){
+     #      dev.off()
+     #   }
+    #}
+
 
     #########
     ## prep data for plotting
     #########
-    if(!is.null(pdfFile)){
-        pdf(file=pdfFile, width=11, height=8.5)
-    }
 
-    mt <- markerTable 
+    ## spread density table to get to get a column for each cell type
+    mt <- rho %>%
+          dplyr::select(CellType,Sample,SPOT,Total) %>%
+          spread(CellType,Total)
     mt$SPOT <- as.character(mt$SPOT)
 
     ## get median of all spots for each sample+cellType
@@ -816,8 +937,8 @@ plotTotalDensity <- function(markers, markerTable,funcMarker=NULL,funcPosColor="
         spotOrder <- c(filter(dat, SPOT!="Median", 
                                  CellType==sortByMarker, 
                                  grepl("-",Functional)) %>% 
-                          arrange(Sample,Density) %>% 
-                          pull(SampleSpot),
+                                 arrange(Sample,Density) %>% 
+                                 pull(SampleSpot),
                        unique(filter(dat,SPOT=="Median") %>%
                           pull(SampleSpot)))
         dat$SampleSpot2 <- factor(dat$SampleSpot, levels=spotOrder) 
@@ -834,76 +955,21 @@ plotTotalDensity <- function(markers, markerTable,funcMarker=NULL,funcPosColor="
 
     ## add column for color fill
     dat$Colors <- getTotalDensityFillColors(dat,funcPosColor,funcNegColor,sampleColor,sampleColorDark)
-    clrs <- dat$Colors
-    names(clrs) <- clrs ##### THIS IS STUPID. FIGURE OUT A BETTER WAY
-
-    ## remove sample name from SampleSpot for x axis labels
-    xlbls <- gsub(".*_","",dat$SampleSpot)
-    names(xlbls) <- dat$SampleSpot
-
-    ## set up temporary legend labels in case there is no functional marker
-    legendLabels <- c("TMP","TMP")
-    if(!is.null(funcMarker)){
-        legendLabels <- paste0(funcMarker,c("-","+"))
-    }    
 
     ## add new column for cell type labels in order to make extra long ones wrap
-    cellTypeLabels <- str_wrap(gsub(",",", ",unique(dat$CellType)), width=30)
+    cellTypeLabels <- str_wrap(gsub(",",", ",unique(dat$CellType)), width=25)
     dat$CellTypeLabels <- gsub(", ",",",cellTypeLabels)
 
-    #####
-    ## generate plot(s)
-    #####
-    if(onePanel){
-        flog.debug("printing all plots on one panel")
-        g <- ggplot(dat, aes(x=SampleSpot2, y=Density, 
-                    fill=factor(Colors,levels=c(funcNegColor,funcPosColor,sampleColor,sampleColorDark)))) +
-               geom_bar(stat="identity",position="stack") + 
-               plotTheme +
-               xlab("FOV") +
-               ylab("Density (counts/mm^2)") +
-               scale_fill_manual(values=clrs, 
-                                 breaks=c(funcNegColor,funcPosColor),
-                                 labels=legendLabels) +
-               scale_x_discrete(labels=xlbls) +
-               geom_errorbar(aes(ymin=ymin,ymax=ymax)) 
-               
-        flog.debug("length unique samples: %s",len(unique(dat$Sample)))
-        if(len(unique(dat$Sample2)) > 1){
-            g <- g + facet_grid(CellTypeLabels ~ Sample2, scales="free_x", switch="y")
-        } else {
-            g <- g + facet_wrap(~CellType, strip.position=c("top")) + 
-                 labs(title=unique(dat$Sample)) 
-        }
-        if(is.null(funcMarker)){
-            g <- g + theme(legend.position="none")
-        }
-        print(g)
-    } else {
-        ### NOTE: WHEN PRINTED SEPARATELY Y-SCALES ARE DIFFERENT
-        for(marker in markers){
-            mdat <- dat %>% filter(CellType==marker)
-            g <- ggplot(mdat, aes(x=SampleSpot, y=Density, 
-                                  fill=factor(Colors,levels=c(funcNegColor,funcPosColor,
-                                                            sampleColor,sampleColorDark)))) +
-                  geom_bar(stat="identity",position="stack") +
-                   theme(legend.title=element_blank(),
-                         axis.text=element_text(size=8),
-                         axis.text.x = element_text(angle = 90, hjust = 1)) +
-                   xlab("FOV") +
-                   ylab("Density (counts/mm^2)") + 
-                   labs(title=marker) + 
-                   scale_fill_manual(values=clrs)
-            if(is.null(funcMarker)){
-                g <- g + theme(legend.position="none")
-            }
-            print(g)
-        }
-    }
 
-    if(!is.null(pdfFile)){
-        dev.off()
-    }
+    ##########
+    #### FINALLY, MAKE PLOTS!
+    ##########
+
+    plotList <- getTotalDensityPlots(dat, markerList, plotPer, funcMarker=funcMarker, funcPosColor=funcPosColor,
+                     funcNegColor=funcNegColor, sampleColor=sampleColor, sampleColorDark=sampleColorDark,
+                     consistentYScaling=consistentYScaling)
+
+    return(plotList)
 }
 
 
@@ -1017,11 +1083,113 @@ calculateDensity <- function(dat, areas, bandAssignments, markerSet, cellTypeNam
   }
 
   if(writeCSVfiles){
-    ctf <- basename(gsub("\\.txt","",cellTypeFile))
-    write_csv(as.data.frame(rhos), file.path(outDir,cc(sampleName, ctf, "interfaceStatsV3_Density.csv")))
+    write_csv(as.data.frame(rhos), file.path(outDir,cc(sampleName, "interface_density.csv")))
   }
 
   return(rhos)
+}
+
+#' Internal utility function to print total density plots to pdf
+#' 
+#' Print plots either all in one file, with one file per marker set, 
+#' or one file per marker. One file per marker can only be done if there
+#' is no facetting involved (i.e., singlePanelPlots must be set to FALSE)
+#' 
+#' @param plotList     a list of ggplots to be printed; may or may not be a nested list,
+#'                     depending on how the plots were built (specifically on, 'plotPer') 
+#' @param markerList   named list of marker sets
+#' @param filePer      print one file per this value; choices are ['plot'|'sample'|'marker'|NULL]; 
+#'                     set to NULL to print all plots in one file, named by pdfFile (required when
+#'                     printing to a single file)
+#' @param plotPer      one plot was built for each of these units; choies are ['markerSet','marker','sample',
+#'                     'sample+marker']
+#' @param pdfFile      if printing all plots to a single file (filePer is NULL), file name must be specified here 
+#' @param height       height of PDF image; default=8.5
+#' @param width        width of PDF image; default=11
+#' @return nothing 
+printTotalDensityPlots <- function(plotList, markerList, filePer=NULL, plotPer='markerSet', 
+                                   pdfFile=NULL, height=8.5, width=11){
+    h=height
+    w=width
+
+print(names(plotList))
+
+    ## validate choices
+    if(!is.null(filePer)){
+        if(filePer %in% c('sample','marker') & !(plotPer %in% c('sample+marker','marker+sample'))){
+            stop(paste0("Can not print files per ",filePer," unless plotPer is 'sample+marker' or 'marker+sample'"))
+        }
+    }
+
+    if(is.null(filePer)){ 
+        ## print all plots in a single file; pdfFile must be specified
+        if(is.null(pdfFile)){
+            stop("Must specify pdfFile when printing all plots to a single file (filePer==NULL)")
+        }
+        pdf(pdfFile,height=h,width=w)
+        if(plotPer=='sample+marker'){
+            ## plots are in a nested list, with the outer list named by sample and inner lists
+            ## by markers
+            for(s in seq(names(plotList))){
+                for(m in seq(names(plotList[[s]]))){
+                    print(plotList[[s]][[m]])
+                }
+            }
+        } else {
+            ## if plots were build in any other way, they are just in a flat list named by 
+            ## the way they were wrapped (by sample, or marker, markerSet, etc.
+            for(p in names(plotList)){
+                print(plotList[[p]])
+            }
+        }
+        dev.off()
+    } else if(filePer == 'plot'){
+        ## print one file per plot, regardless of how the plots were build
+        if(plotPer %in% c('sample+marker','marker+sample')){
+            for(s in names(plotList)){
+                for(m in names(plotList[[s]])){
+                    pdf(paste0(s,"_",m,".pdf"),height=h,width=w)
+                        print(plotList[[s]][[m]])
+                    dev.off()
+                }
+            }
+        } else {
+            for(pn in names(plotList)){
+                pdf(paste0(pn,"_totalDensity.pdf"),height=h,width=w)
+                print(plotList[[pn]])
+                dev.off()
+            }
+        }
+    } else if(filePer == 'sample'){
+        ## if each plot is one marker in one sample, print all
+        ## plots for one sample in one file
+        for(s in names(plotList)){
+            pdf(paste0(s,"_totalDensity.pdf"),height=h,width=w)
+            for(m in names(plotList[[s]])){
+                print(plotList[[s]][[m]])
+            }
+            dev.off()
+        } 
+    } else if(filePer == 'marker'){
+        ## if each plot is one marker in one sample, print all
+        ## plots for one marker in one file
+        allMarkers <- c()
+        for(s in names(plotList)){
+            allMarkers <- c(allMarkers, names(plotList[[s]]))
+        }
+        allMarkers <- unique(allMarkers)
+        for(m in allMarkers){
+            pdf(paste0(m,"_totalDensity.pdf"),height=h,width=w)
+            for(s in names(plotList)){
+                if(m %in% names(plotList[[s]])){
+                    print(plotList[[s]][[m]])
+                }
+            }
+            dev.off()
+        }
+    } else {
+        stop(paste0("Unrecognized print option: filePer='",filePer,"'"))
+    }
 }
 
 #' Plot density of each FOV for one sample
@@ -1029,7 +1197,7 @@ calculateDensity <- function(dat, areas, bandAssignments, markerSet, cellTypeNam
 #' @param dataFiles                 vector of *.rda files containing Halo data for a single sample
 #' @param annotationsDirs           vector of directories containing *.annotations files, XML files of boundary
 #'                                  annotations from Halo; order must correspond to order of dataFiles
-#' @param cellTypeFile              a text file with each line containing a cell type marker; may be
+#' @param markerSetFiles             a vector of text files with each line containing a cell type marker; may be
 #'                                  marker combinations delimited by commas
 #' @param cellTypeName              a character string naming the group of cell types (e.g., T Cells)
 #' @param fovBB                     a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
@@ -1048,9 +1216,8 @@ calculateDensity <- function(dat, areas, bandAssignments, markerSet, cellTypeNam
 #'                                  should be removed from data before any calculations
 #' @param writeCSVfiles             logical; write CSV files, one of density values and one of area values; 
 #'                                  default=TRUE
-#' @param ymax                      maximum y value; by default, this value is dictated by the data
 #' @param maxG                      maximum factor of 10 to use for generating random points on grid [ REWORD??? ]
-#' @param outDir                    if writeCSVfiles=T, directory to which these files will be written#' @return nothing
+#' @param outDir                    if writeCSVfiles=T, directory to which these files will be written
 #' @param byBand                    logical indicating whether to break down density by distance from tumor interface; 
 #'                                  default=FALSE
 #' @param bandWidth                 width of each band around tumor interface, to be used when byBand is TRUE; 
@@ -1058,23 +1225,34 @@ calculateDensity <- function(dat, areas, bandAssignments, markerSet, cellTypeNam
 #' @param maxDistanceFromInterface  include only those cells within this distance from tumor interface
 #' @param boxPlots                  logical indicating whether to generate a box plot for each cell type
 #'                                  comparing mean densities between samples; default=TRUE
+#' @param plotPer                   generate plot per ['markerSet'|'marker'|'sample'|'sample+marker]; default='markerSet' 
+#' @param fileSetup                 ['single'|'per-marker'|'per-markerSetFile']; when set to 'single', ALL plots will be in
+#'                                  a single PDF file; must provide pdfFile 
+#' @param consistentYScaling        logical; when onePanel=FALSE, set this parameter to FALSE in order to scale separate 
+#'                                  plots individually; default=TRUE
 #' @export
-plotDensity <- function(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, fovBB, pad, pdfFile, 
+plotDensity <- function(dataFiles, annotationsDirs, markerSetFiles, cellTypeName, fovBB, pad, pdfFile, 
                          logPlot=F, funcMarker=NULL, funcPosColor="grey50", funcNegColor="grey35",
                          sampleColor="#f16913", sampleColorDark="#80380A",sortByMarker="CD3", 
                          sampleOrder=NULL, exclude_sample_fov=NULL, exclude_sample_marker=NULL,
                          writeCSVfiles=TRUE, maxG=5, outDir=getwd(), byBand=FALSE, bandWidth=10,
-                         maxDistanceFromInterface=200, densityFiles=NULL, singlePanelPlots=TRUE,
-                         includeSortByMarker=TRUE, ymax=4000, boxPlots=TRUE){
+                         maxDistanceFromInterface=200, densityFiles=NULL, boxPlots=TRUE, 
+                         plotPer='markerSet', includeSortByMarker=TRUE, consistentYScaling=TRUE, 
+                         filePer=NULL,pdfHeight=8.5,pdfWidth=11){
 
-    markers <- c()
-    for(ctf in cellTypeFile){
-        markers <- c(markers, scan(ctf,""))
-    }   
-    if(!is.null(funcMarker)){
-        markers <- c(markers,paste0(markers,",",funcMarker))
+    ### create list of markers from all cell type files
+    markerList <- list()
+    for(ctf in markerSetFiles){
+        msetName <- gsub(".txt","",basename(ctf))
+        markerList[[msetName]] <- scan(ctf,"")
+        if(!is.null(funcMarker)){
+            markerList[[msetName]] <- c(markerList[[msetName]],paste0(markerList[[msetName]],",",funcMarker))
+        }
     }
-    if(!is.null(sortByMarker) & !(sortByMarker %in% markers)){
+    ## collapse marker list into vector for calculation of area and density
+    markers <- unique(unlist(markerList))
+    ## add marker to sort by if it's not in the list
+    if(!is.null(sortByMarker) & !sortByMarker %in% markers){
         markers <- c(markers,sortByMarker)
     }
 
@@ -1083,7 +1261,11 @@ plotDensity <- function(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, 
     if(!is.null(densityFiles)){
         for(df in densityFiles){
             den <- readRDS(df)
-            rho <- bind_rows(rho, den$density)
+            if("density" %in% names(den)){
+                rho <- bind_rows(rho, den$density)
+            } else {
+                rho <- bind_rows(rho, den)
+            }
         }
         rho <- select(rho, c(Sample,SPOT,CellType,Total)) ## this shouldn't be needed after running again
     }
@@ -1120,7 +1302,7 @@ plotDensity <- function(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, 
                 density <- calculateDensity(dd, samp_ia$area, samp_ia$bandAssignments,
                                             markers, cellTypeName, pad, funcMarker=funcMarker,
                                             sortByMarker=sortByMarker,writeCSVfiles=writeCSVfiles,
-                                            outDir=outDir, statsByBand=statsByBand)
+                                            outDir=outDir, statsByBand=byBand)
                 if(!is.null(density)){
                     if(byBand){
                         density <- density %>% select(-one_of(names(density)[grep("Count",names(density))]))
@@ -1143,12 +1325,13 @@ plotDensity <- function(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, 
                                  bind_rows(rho)
                         saveRDS(fs, file=file.path(outDir,
                                               paste(getSampleFromFileName(dataFile),
-                                                "FOV_Stats.rda",sep="_")))
+                                                "FOV_area_density.rda",sep="_")))
                     }    
                 }
-            } 
+            }
+            flog.debug("saving density to %s",file.path(outDir,"all_samples_density.rda")) 
             ## save as you go
-            saveRDS(rho,file=gsub("\\.txt","_density.rda",basename(ctf)))
+            saveRDS(rho,file=file.path(outDir,"all_samples_density.rda"))
         }
     }
 
@@ -1162,28 +1345,17 @@ plotDensity <- function(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, 
          rho <- removeExclusions(rho, exclude_sample_fov=exclude_sample_fov)
     }
 
-    #sampleName <- rho$Sample[1]
-    #    markers    <- scan(ctf, "")
-    #    if(!(sortByMarker %in% markers)){
-    #        markers = c(sortByMarker,markers)
-    #    } 
-
-    if(boxPlots){
-        bpdfFile <- gsub(".pdf","_boxplots.pdf",pdfFile)
-        pdf(bpdfFile,height=8,width=8)
-        densityBoxPlots(markers, rho, sampleOrder)
-        dev.off()
-    }
-
+    #######
+    ## BUILD PLOT(S)
+    #######
     if(!byBand){
-        markerTable <- rho %>% 
-                       dplyr::select(CellType,Sample,SPOT,Total) %>% 
-                       spread(CellType,Total) 
-        plotTotalDensity(markers,markerTable,funcMarker=funcMarker,funcPosColor=funcPosColor,
+        flog.debug("generating total density plots")
+        tdPlots <- plotTotalDensity(markerList,rho,funcMarker=funcMarker,funcPosColor=funcPosColor,
                          funcNegColor=funcNegColor,sampleColor=sampleColor,
                          sampleColorDark=sampleColorDark,spotOrder=spotOrder,
-                         onePanel=singlePanelPlots,pdfFile=pdfFile,sampleOrder=sampleOrder,
-                         sortByMarker=sortByMarker,includeSortByMarker=includeSortByMarker)
+                         plotPer=plotPer,pdfFile=pdfFile,sampleOrder=sampleOrder,
+                         sortByMarker=sortByMarker,includeSortByMarker=includeSortByMarker,
+                         boxPlots=boxPlots,consistentYScaling=consistentYScaling)
     } else {
         mt <- rho %>%
                 gather(key="Band",value="Density",names(rho)[2:(ncol(rho)-2)]) %>%
@@ -1193,6 +1365,17 @@ plotDensity <- function(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, 
         ## to do: change this to print inside plotDensityByBand instead of returning plot
         plotDensityByBand(dat, sampleName, c(markers,paste(markers,funcMarker,sep=",")))
     }
- 
+
+
+    ######
+    ## PRINT PLOTS(S)
+    ######
+    if(!is.null(filePer)){
+        flog.debug("printing one file per %s",filePer)
+    } else {
+        flog.debug("printing all plots to ONE file: %s",pdfFile)
+    }
+    printTotalDensityPlots(tdPlots, markerList, filePer=filePer, plotPer=plotPer, 
+                           pdfFile=pdfFile, height=pdfHeight, width=pdfWidth)
 }
 

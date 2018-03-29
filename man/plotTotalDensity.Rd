@@ -4,19 +4,14 @@
 \alias{plotTotalDensity}
 \title{Plot density for each marker, broken down by FOV}
 \usage{
-plotTotalDensity(markers, markerTable, funcMarker = NULL,
+plotTotalDensity(markerSets, rho, funcMarker = NULL,
   funcPosColor = "grey35", funcNegColor = "grey50",
   sampleColor = "#f16913", sampleColorDark = "#80380A", spotOrder = NULL,
-  sampleOrder = NULL, onePanel = TRUE, pdfFile = NULL,
-  sortByMarker = NULL, includeSortByMarker = FALSE)
+  sampleOrder = NULL, onePanel = TRUE, oneFile = TRUE, pdfFile = NULL,
+  sortByMarker = NULL, includeSortByMarker = FALSE, boxPlots = TRUE,
+  consistentYScaling = TRUE)
 }
 \arguments{
-\item{markers}{vector of markers/marker combinations to be plotted; there will
-be one plot per marker}
-
-\item{markerTable}{tibble containing columns for Sample, SPOT, and a column of densities
-for each marker}
-
 \item{funcMarker}{a functional marker that is included in the marker combos in markerTable;
 for each marker, there should be a combo that includes the functional marker
 (indicating that cell type is positive for this marker) and one that does
@@ -39,6 +34,16 @@ the plot(s); default=NULL}
 panel; default=TRUE}
 
 \item{pdfFile}{if given, plot(s) will be written to this file; default=NULL}
+
+\item{boxPlots}{logical indicating whether to create a box plot for each cell type showing 
+the mean difference between samples; default=TRUE}
+
+\item{consistentYScaling}{logical; when onePanel=FALSE, set this parameter to FALSE in order to scale separate}
+
+\item{markers}{vector of markers/marker combinations to be plotted; there will
+be one plot per marker}
+
+\item{density}{tibble containing columns for Sample, SPOT, CellType, Total}
 
 \item{logPlot}{logical indicating that density should be plotted on log scale; default=FALSE}
 }

@@ -4,7 +4,7 @@
 \alias{plotDensityByBand}
 \title{Plot density broken down by distance from tumor interface}
 \usage{
-plotDensityByBand(density, sampleName, markers)
+plotDensityByBand(density, sampleName, markers, pdfFile = NULL)
 }
 \arguments{
 \item{density}{tibble with columns for Density, Band and CellType}
@@ -12,6 +12,8 @@ plotDensityByBand(density, sampleName, markers)
 \item{sampleName}{name of sample from which the FOVs came from}
 
 \item{markers}{vector of markers/marker combos}
+
+\item{pdfFile}{pdfFile to which plot will be printed}
 }
 \description{
 Given a vector of markers and a tibble containing columns for Density and 

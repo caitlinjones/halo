@@ -4,9 +4,8 @@
 \alias{getAreaPerBand}
 \title{Compute lattice of boundary bins}
 \usage{
-getAreaPerBand(allBoundaries, sample, fov, maxG, haloInfiltrationDir,
-  outDir = NULL, bbData = NULL, writeCSVfiles = FALSE,
-  interfaceBins = NULL)
+getAreaPerBand(allBoundaries, sample, fov, maxG, outDir = NULL,
+  bbData = NULL, writeCSVfiles = FALSE, interfaceBins = NULL)
 }
 \arguments{
 \item{sample}{sample name}
@@ -14,9 +13,6 @@ getAreaPerBand(allBoundaries, sample, fov, maxG, haloInfiltrationDir,
 \item{fov}{FOV}
 
 \item{maxG}{maximum factor of 10 to use for generating random points on grid [ REWORD??? ]}
-
-\item{haloInfiltrationDir}{directory containing halo infiltration files with suffix 
-"_infiltration_ex_data"}
 
 \item{outDir}{if writeCSVfiles=TRUE, files will be written here}
 

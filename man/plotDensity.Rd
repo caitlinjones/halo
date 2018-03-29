@@ -4,17 +4,23 @@
 \alias{plotDensity}
 \title{Plot density of each FOV for one sample}
 \usage{
-plotDensity(dataFiles, annotationsDirs, cellTypeFile, cellTypeName, fovBB, pad,
+plotDensity(dataFiles, annotationsDirs, cellTypeFiles, cellTypeName, fovBB, pad,
   pdfFile, logPlot = F, funcMarker = NULL, funcPosColor = "grey50",
   funcNegColor = "grey35", sampleColor = "#f16913",
   sampleColorDark = "#80380A", sortByMarker = "CD3", sampleOrder = NULL,
   exclude_sample_fov = NULL, exclude_sample_marker = NULL,
-  writeCSVfiles = TRUE, maxG = 5, outDir, byBand = FALSE,
+  writeCSVfiles = TRUE, maxG = 5, outDir = getwd(), byBand = FALSE,
   bandWidth = 10, maxDistanceFromInterface = 200, densityFiles = NULL,
-  singlePanelPlots = TRUE, includeSortByMarker = TRUE, ymax = 4000)
+  boxPlots = TRUE, singlePanelPlots = TRUE, includeSortByMarker = TRUE,
+  consistentYScaling = TRUE, fileSetup = "single")
 }
 \arguments{
-\item{cellTypeFile}{a text file with each line containing a cell type marker; may be
+\item{dataFiles}{vector of *.rda files containing Halo data for a single sample}
+
+\item{annotationsDirs}{vector of directories containing *.annotations files, XML files of boundary
+annotations from Halo; order must correspond to order of dataFiles}
+
+\item{cellTypeFiles}{a vector of text files with each line containing a cell type marker; may be
 marker combinations delimited by commas}
 
 \item{cellTypeName}{a character string naming the group of cell types (e.g., T Cells)}
@@ -58,14 +64,17 @@ default=10}
 
 \item{maxDistanceFromInterface}{include only those cells within this distance from tumor interface}
 
-\item{ymax}{maximum y value; by default, this value is dictated by the data}
+\item{boxPlots}{logical indicating whether to generate a box plot for each cell type
+comparing mean densities between samples; default=TRUE}
 
-\item{dataFile}{*.rda file containing Halo data for a single sample}
+\item{singlePanelPlots}{logical; when set to FALSE, the plot for each marker will be printed separately; 
+by default, there will be one page of plots for all cell types in each cellTypeFile}
 
-\item{annotationsDir}{directory containing *.annotations files, XML files of boundary
-annotations from Halo}
+\item{consistentYScaling}{logical; when onePanel=FALSE, set this parameter to FALSE in order to scale separate 
+plots individually; default=TRUE}
 
-\item{haloInfiltrationDir}{directory containing Halo Infiltration data (csv, plot files)}
+\item{fileSetup}{['single'|'per-marker'|'per-cellTypeFile']; when set to 'single', ALL plots will be in
+a single PDF file; must provide pdfFile}
 }
 \description{
 Plot density of each FOV for one sample

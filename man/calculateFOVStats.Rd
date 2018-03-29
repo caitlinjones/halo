@@ -4,24 +4,18 @@
 \alias{calculateFOVStats}
 \title{Calculate total area and density of entire FOVs}
 \usage{
-calculateFOVStats(aFiles, dataFile, cellTypeFile, cellTypeName, fovBB, pad,
-  maxG, writeCSVfiles = TRUE, funcMarker = NULL, sortByMarker = NULL,
-  outDir)
+calculateFOVStats(aFiles, data, markerSet, cellTypeName, pad, maxG,
+  writeCSVfiles = TRUE, funcMarker = NULL, sortByMarker = NULL, outDir)
 }
 \arguments{
 \item{aFiles}{a vector of Halo boundary annotation files, with 
 '.annotations' extension in XML format}
 
-\item{dataFile}{a *.rda file with Halo data for one sample}
+\item{data}{Halo data for one sample loaded from a *.rda}
 
-\item{cellTypeFile}{file containing cell types to be calculated; each line
-is one cell type and each cell type can be either a single
-marker name or a comma-separated list of markers}
+\item{markerSet}{a vector markers to calculate density for}
 
 \item{cellTypeName}{a name to represent the cell types in marker file}
-
-\item{fovBB}{a list with four elements: X0, X1, Y0, Y1, representing the minimum
-and maximum coordinates of the FOV to be plotted}
 
 \item{pad}{amount to trim from FOV before calculating}
 
@@ -29,10 +23,13 @@ and maximum coordinates of the FOV to be plotted}
 
 \item{writeCSVfiles}{logical indicating whether to write density and area tables to file;}
 
-\item{funcMarker}{this marker will be added to all markers in cellTypeFile in order to
+\item{funcMarker}{this marker will be added to all markers in markerSet in order to
 compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]}
 
 \item{outDir}{if writeCSVfiles=T, directory to which these files will be written}
+
+\item{fovBB}{a list with four elements: X0, X1, Y0, Y1, representing the minimum
+and maximum coordinates of the FOV to be plotted}
 }
 \value{
 a list containing two tables: 'density' and 'area'

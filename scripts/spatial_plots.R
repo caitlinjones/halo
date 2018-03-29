@@ -5,7 +5,8 @@ options('python_cmd'='/opt/common/CentOS_6-dev/python/python-3.5.1/bin/python')
 
 write("Loading libraries...",stdout())
 suppressPackageStartupMessages(library("argparse"))
-suppressPackageStartupMessages(library("halo"))
+#suppressPackageStartupMessages(library("halo"))
+suppressPackageStartupMessages(library("halodev"))
 
 ###
 # Parse user input
@@ -52,23 +53,13 @@ if(!is.null(pp)){
 
 flog.info("Plotting total density")
 
-if(len(pp$density_files) > 1 | len(pp$data_file) > 1){
-    pdfFile <- gsub("\\.txt","_totalDensity.pdf",basename(args$manifest))
-} else if(len(pp$data_file) == 1){
-    pdfFile <- gsub("\\.rda","_totalDensity.pdf",basename(pp$data_file))
-} else if(len(pp$density_files) == 1){
-    pdfFile <- gsub("\\.rda","_totalDensity.pdf",basename(pp$density_files))
-} else {
-    usage()
-}
-
-plotDensity(pp$data_file, 
-            pp$annotations_dir, 
-            pp$cell_types_file, 
+plotDensity(pp$data_files, 
+            pp$annotations_dirs, 
+            pp$marker_set_files, 
             pp$cell_type_name, 
             pp$fov_bb, 
             pp$pad, 
-            pdfFile, 
+            pp$pdf_file, 
             densityFiles=pp$density_files,
             logPlot=pp$log_plot,
             funcMarker=pp$func_marker, 
@@ -79,13 +70,15 @@ plotDensity(pp$data_file,
             exclude_sample_fov=pp$exclude_sample_fov, 
             sortByMarker=pp$sort_by_marker, 
             sampleOrder=pp$sample_order,
-            ymax=pp$ymax, 
             outDir=pp$out_dir,
             writeCSVfiles=pp$write_csv_files, 
             maxG=pp$max_g,
             byBand=pp$by_band,
             bandWidth=pp$band_width, 
             maxDistanceFromInterface=pp$max_distance_from_interface,
-            singlePanelPlot=pp$single_panel_plots,
-            includeSortByMarker=pp$include_sort_by_marker)
+            plotPer=pp$plot_per,
+            filePer=pp$file_per,
+            includeSortByMarker=pp$include_sort_by_marker,
+            consistentYScaling=pp$consistent_y_scaling,
+            boxPlots=pp$box_plots)
 

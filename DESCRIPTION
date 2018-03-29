@@ -1,5 +1,5 @@
-Package: halo
-Title: Analyze and visualize Halo data
+Package: halodev
+Title: Development version of the package 'halo', which analyzes and visualizes Halo data
 Version: 0.0.0.9000
 Authors@R: c(person("Nicholas", "Socci", email = "socci@cbio.mskcc.org", role = c("aut")),
              person("Caitlin", "Jones", email = "byrne@cbio.mskcc.org", role = c("aut","cre"))
