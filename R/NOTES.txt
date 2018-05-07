@@ -1,0 +1,23 @@
+General workflow:
+
+1) parse meta data and generate yaml config file(s)
+
+2) create *.rda files from ObjectAnalysisData.csv files
+    - Nick's code
+    - add Zheng's exclusions
+
+3) run counts of all possible combinations (marker combo table)
+    ** this is per sample, but for all FOV combined; still need to run
+       computeMultiMarkerCounts() to get counts per FOV for particular marker combos
+    ** basic QC step
+
+4) calculate area for 10micron bands, +/- 360 microns from tumor interfaces; this 
+   will be standard
+    ** store *rda files with area per band and band assignments
+    ** may run again for different band widths, but can also just filter for a smaller
+       total span (e.g., +/- 200)
+
+5) calculate density for any given marker sets using stored area files (3) and data files (1)
+    ** store in *.rda files?
+
+6) plot by band and total density, by FOV and by sample, stacked and unstacked
