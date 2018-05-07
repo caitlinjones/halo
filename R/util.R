@@ -425,3 +425,124 @@ parseManifestList <- function(listString){
     }
     manList    
 }
+addNegatives <- function(cellType, allMarkers){
+    tmp <- gsub("-", "", unlist(strsplit(cellType, ",")))
+    if(length(allMarkers[-which(allMarkers %in% tmp)]) > 0){
+        negs <- paste0(allMarkers[-which(allMarkers %in% tmp)],"-",collapse=",")
+        cellType <- paste(cellType,negs,sep=",")
+    } 
+    return(cellType)
+}
+
+removeNegativeMarkers <- function(marker){
+    tmp <- unlist(strsplit(marker,","))
+    if(any(grepl("-",tmp))){
+        tmp <- tmp[-grep("-",tmp)]
+    }
+    if(length(tmp) > 0){
+        return(paste(tmp,collapse=","))
+    } else {
+        return("Negative")
+    }
+}
+
+getMarkerConfig <- function(configFile){
+
+    config <- read_yaml(configFile)
+    cellIDs <- NULL
+
+    if("cell_identity_markers" %in% names(config)){
+        cellIDs <- config$cell_identity_markers
+    }
+
+    allMarkers <- data.frame(MarkerSet=NA,Population=NA,CellType=NA,Label=NA,Color="gray")
+
+    sets <- config$marker_sets
+
+    for(nms in names(sets)){
+        ms <- sets[[nms]]
+        remPop <- FALSE   ## remove population markers from labels
+        remNeg <- FALSE   ## remove negative markers from labels
+        functional <- c() 
+
+        msConfig <- names(ms)
+ 
+        if("cell_type_labels" %in% msConfig){
+            if("remove_negative_markers" %in% names(ms$cell_type_labels)){
+                remNeg <- ms$cell_type_labels$remove_negative_markers
+            }
+            if("remove_population_markers" %in% names(ms$cell_type_labels)){
+                remPop <- ms$cell_type_labels$remove_population_markers
+            }
+        }
+
+        if("functional" %in% msConfig){
+            if(length(ms$functional) == 1){
+                functional <- c(ms$functional, paste0(ms$functional,"-"))
+            } else {
+                allFunc <- unique(gsub("-","",unlist(strsplit(ms$functional,","))))
+                for(f in seq(ms$functional)){
+                    functional[f] <- addNegatives(ms$functional[f],allFunc)
+                }
+                funcNeg <- paste0(paste0(allFunc,"-"),collapse=",")
+                functional <- c(functional, funcNeg)
+            }  
+        }
+
+        for(population in ms[["populations"]]){
+            pops <- population
+            if("identity_negatives" %in% msConfig){
+                if(ms$identity_negatives == "BOTH"){
+                    pops <- c(pops, addNegatives(pops, cellIDs))
+                } else if(ms$identity_negatives){
+                    pops <- addNegatives(pops, cellIDs)
+                }
+            }
+            for(p in pops){
+                clr = "gray"
+                if(length(functional) > 0){
+                    for(f in functional){
+                        mf <- paste(p,f,sep=",")
+                        lbl <- mf
+                        if(remPop){
+                            lbl <- f
+                        }
+                        if(remNeg){
+                            lbl <- removeNegativeMarkers(lbl)
+                        }
+                        if("cell_type_labels" %in% msConfig){
+                            if("special_labels" %in% names(ms$cell_type_labels)){
+                                if(lbl %in% names(ms$cell_type_labels$special_labels)){
+                                    lbl <- ms$cell_type_labels$special_labels[[lbl]]
+                                }
+                            }
+                        }
+                        if(is.null(lbl) | nchar(lbl) == 0){
+                            lbl <- "Negative"
+                        }
+                        if(lbl %in% names(config$plot_options$marker_colors)){
+                            clr <- config$plot_options$marker_colors[[lbl]]
+                        }
+                        allMarkers <- suppressWarnings(bind_rows(allMarkers, list(MarkerSet=nms, Population=population, CellType=mf, Label=lbl, Color=clr)))
+                    }
+                } else {
+                    lbl <- p
+                    if(remNeg){
+                       lbl <- removeNegativeMarkers(lbl)
+                    }
+                    if(lbl %in% names(config$plot_options$marker_colors)){
+                       clr <- config$plot_options$marker_colors[[lbl]]
+                    }
+                    if(is.null(lbl) | nchar(lbl) == 0){
+                        lbl <- "Negative"
+                    }
+                    allMarkers <- suppressWarnings(bind_rows(allMarkers, list(MarkerSet=nms, Population=population, CellType=p, Label=lbl, Color=clr)))
+                }
+            }
+        }
+    }
+
+    return(as.tibble(allMarkers %>% filter(complete.cases(.))))
+
+    
+}

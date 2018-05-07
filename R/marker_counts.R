@@ -459,9 +459,7 @@ countMarkers <- function(markerFile, dataDir, pad=0, countsXLSXFile=NULL,
 }
 
 computeMultiMarkerTable<-function(mt,markerCols) {
-
     for(ii in which(grepl(",",markerCols))) {
-        #cat(ii,markerCols[ii],"\n")
         markers=strsplit(markerCols[ii],",")[[1]]
         mt[[markerCols[ii]]] = mt %>%
             dplyr::select(one_of(markers)) %>%
