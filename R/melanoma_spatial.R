@@ -501,20 +501,19 @@ calculateInterfaceArea <- function(aFiles, dat, pad, writeCSVfiles=TRUE,
 #' Based on pre-computed areas and band assignments (may be one band, depending on
 #' how area was calculated), calculate densities for a set of markers in each band
 #' 
-#' @param dat
-#' @param areas
-#' @param bandAssignments
-#' @param markerSet
-#' @param cellTypeName
-#' @param pad
-#' @param funcMarker
-#' @param sortByMarker
-#' @param writeCSVfiles
-#' @param outDir
-#' @param statsByBand
-#' @return 
+#' @param dat                tibble containing marker counts 
+#' @param areas              tibble containing area by band
+#' @param bandAssignments    tibble containing band assignments for each cell
+#' @param markerSet          vector of markers for which density should be calculated
+#' @param pad                number in microns, amount to trim from border of FOV
+#' @param funcMarker         functional marker for which to calculate density; default=NULL
+#' @param sortByMarker       sort data by density of this marker; default=NULL
+#' @param writeCSVfiles      logical; write density to csv files; default=FALSE
+#' @param outDir             logical; if writeCSVfiles is TRUE, write them to this directory
+#' @param statsByBand        logical; calculate density by interval bands
+#' @return tibble containing densities for each marker type
 #' @export
-calculateDensity <- function(dat, areas, bandAssignments, markerSet, cellTypeName,
+calculateDensity <- function(dat, areas, bandAssignments, markerSet, 
                               pad, funcMarker=NULL, sortByMarker=NULL,writeCSVfiles=TRUE,
                               outDir=NULL,statsByBand=FALSE){
   pad <- as.numeric(pad)

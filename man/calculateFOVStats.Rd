@@ -27,9 +27,6 @@ calculateFOVStats(aFiles, data, markerSet, cellTypeName, pad, maxG,
 compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]}
 
 \item{outDir}{if writeCSVfiles=T, directory to which these files will be written}
-
-\item{fovBB}{a list with four elements: X0, X1, Y0, Y1, representing the minimum
-and maximum coordinates of the FOV to be plotted}
 }
 \value{
 a list containing two tables: 'density' and 'area'

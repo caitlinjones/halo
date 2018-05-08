@@ -786,56 +786,6 @@ getTotalDensityPlots <- function(dat, markerList, plotPer='markerSet', funcMarke
 
     ymax <- ifelse(consistentYScaling, max(dat$Density), NULL)
 
-
-Last login: Mon May  7 11:48:17 on ttys000
-byrnec@lski2112:~> selene
-Warning: No xauth data; using fake authentication data for X11 forwarding.
-Last login: Mon May  7 13:41:45 2018 from 192.168.77.112
-byrne@selene:~> cd halo/dev/halodev/R
-byrne@selene:~/halo/dev/halodev/R> vi melanoma_spatial.R 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     #####
     ## generate plot(s)
     #####

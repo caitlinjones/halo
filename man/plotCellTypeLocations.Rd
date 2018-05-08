@@ -4,22 +4,16 @@
 \alias{plotCellTypeLocations}
 \title{Plot location of given cell types within one FOV}
 \usage{
-plotCellTypeLocations(dataFile, annotationsDir, cellTypesFile, fovBB, plotBB,
-  boundaryColors, cellTypeColors, pad = 30, pdfFile = NULL)
+plotCellTypeLocations(dataFiles, annotationsDirs, cellTypesFile, boundaryColors,
+  cellTypeColors, pad = 30, pdfFile = NULL)
 }
 \arguments{
-\item{dataFile}{*.rda file containing ObjectAnalysisData}
+\item{dataFiles}{*.rda file containing ObjectAnalysisData}
 
-\item{annotationsDir}{directory of *.annotations XML files from Halo for one sample}
+\item{annotationsDirs}{directory of *.annotations XML files from Halo for one sample}
 
 \item{cellTypesFile}{text file containing a list of cell type markers, one on each line; 
 each cell type marker may consist of an indivdual marker or a comma-}
-
-\item{fovBB}{a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
-for FOVs}
-
-\item{plotBB}{a list of four elements: X0,X1,Y0,Y1, representing the min/max coords
-for whole plots}
 
 \item{boundaryColors}{a list of hexadecimal color codes for Tum, Exc, and Epi boundaries}
 
