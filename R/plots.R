@@ -504,7 +504,8 @@ getPlotTheme <- function(plotType){
 #' @param plotTitle        title of plot
 #' @param sampleOrder      order in which samples should appear on the plot; default=NULL
 #' @param yMax             if specified, y axis will span from zero to this number; default=NULL
-#' @param separateLegend   logical; when TRUE, legend will be separated from plot. if printLegend is TRUE, will be printed first, before plot. if printLegend is FALSE, will not be printed at all; default=FALSE
+#' @param separateLegend   logical; when TRUE, legend will be separated from plot. if printLegend is TRUE, 
+#'                         will be printed first, before plot. if printLegend is FALSE, will not be printed at all; default=FALSE
 #' @param printLegend      logical; when separateLegend is TRUE, if printLegend is FALSE, no legend will be printed at all; default=TRUE
 #' @param legendOnly       logical; when separateLegend is TRUE, if legendOnly is TRUE, only legend will be printed, no plot
 #' @param yCol             character string specifying which of the columns in mDen is to be used for y values; default="Density"
@@ -514,6 +515,7 @@ getPlotTheme <- function(plotType){
 #' @param yAxisTitle       character string to be used as title of the y axis
 #' @param xAxisTitle       character string to be used as title of the x axis
 #' @return nothing
+#' @export
 plotInfiltrationDensity <- function(mDen, densityMarkers, clrs, plotTitle="", cellTypeLabels=NULL, sampleOrder=NULL,
                                yMax=NULL, separateLegend=FALSE, printLegend=TRUE, legendOnly=FALSE, yCol="Density",
                                pct=FALSE, facetByFOV=TRUE, facetByCellType=FALSE, yAxisTitle="Density (counts/mm^2)",
@@ -607,15 +609,6 @@ plotInfiltrationDensity <- function(mDen, densityMarkers, clrs, plotTitle="", ce
         print(p1)
     }
 }
-
-Last login: Mon May  7 11:48:17 on ttys000
-byrnec@lski2112:~> selene
-Warning: No xauth data; using fake authentication data for X11 forwarding.
-Last login: Mon May  7 13:41:45 2018 from 192.168.77.112
-byrne@selene:~> cd halo/dev/halodev/R
-byrne@selene:~/halo/dev/halodev/R> vi melanoma_spatial.R 
-
-
 
 
 

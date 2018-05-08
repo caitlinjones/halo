@@ -6,7 +6,7 @@
 #' @param   bbG     a list containing X0,X1,Y0,Y1 representing the boundary
 #'                  of the plot area
 #' @return data frame of X and Y values of the random points
-generateSobolGrid<-function(nGrid,bbG) {
+generateSobolGrid <- function(nGrid,bbG) {
     gg=sobol(nGrid,2,scrambling=2)
     data.frame(
         X=gg[,1]*(bbG$X1-bbG$X0)+bbG$X0,
@@ -166,7 +166,7 @@ getAreaPerBand <- function(allBoundaries, sample, fov, maxG, outDir=NULL,
 #' @param bdat      tibble of band data, including at least a column named Band
 #' @param bandArea  a data frame or tibble with an area value for each band in bdat
 #' @return tibble containing all data in bdat and bandArea
-joinBandArea<-function(bdat,bandArea) {
+joinBandArea <- function(bdat,bandArea) {
 
     bdat$Band=as.character(bdat$Band)
     flog.debug("adding band area to band counts")
@@ -221,7 +221,7 @@ cleanBoundaries <- function(boundaries){
 #' @param aFile  Halo boundaries annotation file in XML format; if NULL, must provide
 #'               the list of excluded region tables as returned by cleanBoundaries()
 #' @return tibble filtered to remove points that fall inside exclusion boundaries
-removeExcludedPoints<-function(ds,aFile=NULL,excB=NULL) {
+removeExcludedPoints <- function(ds,aFile=NULL,excB=NULL) {
 
     if(!all(c('X','Y') %in% colnames(ds))){
         ds <- convertCellMinMaxToMidpoints(ds)
@@ -265,7 +265,7 @@ removeExcludedPoints<-function(ds,aFile=NULL,excB=NULL) {
 #'                        of the trimmed FOV
 #' @param allBoundaries   a list returned from readHaloAnnotations
 #' @param interfaceBins   vector of distances (integers) that define each band; default = (-20:20)*10 
-getBandAssignments<-function(ds,bbData,allBoundaries,interfaceBins=(-20:20)*10){
+getBandAssignments <- function(ds,bbData,allBoundaries,interfaceBins=(-20:20)*10){
 
     flog.debug("getting boundaries")
     tumB <- allBoundaries$tumB
@@ -888,6 +888,21 @@ getMarkerDensityTable <- function(markers, dat=NULL, outDir=getwd(), dataFiles=N
     return(rho)
 }
 
+
+#' Summarize infiltration by getting total density of all FOV
+#' in each band
+#' 
+#' Summarize infiltration by getting total density of all FOV
+#' in each band
+#'
+#' @param markers    vector of markers for which density is to be calculated
+#' @param ia         tibble of interface area; required if areaFiles not given; default=NULL
+#' @param ba         tibble containing band assignments of markers; required if areaFiles 
+#'                   not given; default=NULL
+#' @param areaFiles  vector of files containing area and band assignments for each sample; 
+#'                   required if ia or ba is not given; default=NULL
+#' @return tibble containing total density for each band
+#' @export
 getInfiltrationDensitySummary <- function(markers, ia=NULL, ba=NULL, areaFiles=NULL){
 
     if(is.null(ia) | is.null(ba)){
