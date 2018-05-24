@@ -4,12 +4,16 @@
 \alias{printDensityPlots}
 \title{Print density plots}
 \usage{
-printDensityPlots(den, config, yScaleConsistency = "byPopulation",
-  absoluteDensity = TRUE, densityPercentages = TRUE, byFOV = TRUE,
-  summarize = TRUE)
+printDensityPlots(den, bandWidth = NULL, config,
+  yScaleConsistency = "population", absoluteDensity = TRUE,
+  densityPercentage = TRUE, byFOV = TRUE, summarize = TRUE,
+  stacked = TRUE, sampleOrder = NULL, separateLegend = TRUE)
 }
 \arguments{
 \item{den}{tibble containing densities for all markers to be plotted}
+
+\item{bandWidth}{if plotting by distance intervals from infiltration boundary, this is the size of 
+each interval}
 
 \item{config}{configuration of plots (already parsed)}
 
@@ -17,7 +21,7 @@ printDensityPlots(den, config, yScaleConsistency = "byPopulation",
 
 \item{absoluteDensity}{logical; print plots of absolute density values; default=TRUE}
 
-\item{densityPercentages}{logical; print plots of density percentage values; default=TRUE}
+\item{densityPercentage}{logical; print plots of density percentage values; default=TRUE}
 
 \item{byFOV}{logical; print plots of each FOV (all FOV on one panel); default=TRUE}
 

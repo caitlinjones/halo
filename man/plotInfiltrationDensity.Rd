@@ -5,7 +5,7 @@
 \title{Plot and print absolute density or density percentages of cell types near tumor
 interface}
 \usage{
-plotInfiltrationDensity(mDen, densityMarkers, clrs, plotTitle = "",
+plotInfiltrationDensity(mDen, densityMarkers, bandWidth, clrs, plotTitle = "",
   cellTypeLabels = NULL, sampleOrder = NULL, yMax = NULL,
   separateLegend = FALSE, printLegend = TRUE, legendOnly = FALSE,
   yCol = "Density", pct = FALSE, facetByFOV = TRUE,
@@ -16,6 +16,9 @@ plotInfiltrationDensity(mDen, densityMarkers, clrs, plotTitle = "",
 \item{mDen}{tibble containing}
 
 \item{densityMarkers}{a vector of markers for which density is to be plotted}
+
+\item{bandWidth}{if plotting by distance intervals from infiltration boundary, this is the size of 
+each interval}
 
 \item{clrs}{a list of colors, named by either by CellType from mDen tibble, 
 or cellTypeLabels if specified}

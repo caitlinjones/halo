@@ -622,7 +622,7 @@ calculateDensity <- function(dat, areas, bandAssignments, markerSet,
 #' @export
 calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
                             pad, maxG, writeCSVfiles=TRUE,
-                            funcMarker=NULL,sortByMarker=NULL,outDir){
+                            funcMarker=NULL,sortByMarker=NULL,skipTumorSamples=TRUE,outDir){
   pad <- as.numeric(pad)
   dd <- data
   sampleName <- gsub("_ObjectAnalysisData","",unique(dd$Sample))
@@ -653,7 +653,7 @@ calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
       excB <- allBoundaries$excB
     }
 
-    if(len(tumB) > 0){
+    if(len(tumB) > 0 & !skipTumorSamples){
       flog.debug("SPOT %s contains tumor boundaries. skipping.",spot)
       next ## FOV with tumor boundaries are to be handled by calculateInterfaceArea()      
       ## QUESTION: do we ever want to calculate total density of FOV even if there ARE

@@ -5,7 +5,8 @@
 \title{Calculate total area and density of entire FOVs}
 \usage{
 calculateFOVStats(aFiles, data, markerSet, cellTypeName, pad, maxG,
-  writeCSVfiles = TRUE, funcMarker = NULL, sortByMarker = NULL, outDir)
+  writeCSVfiles = TRUE, funcMarker = NULL, sortByMarker = NULL,
+  skipTumorSamples = TRUE, outDir)
 }
 \arguments{
 \item{aFiles}{a vector of Halo boundary annotation files, with 
