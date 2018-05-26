@@ -13,7 +13,7 @@ Run
 library(devtools)
 install_github("caitlinjones/halo")
 ```
-### Step 2: Create manifest with all project parameters
+### Step 2: Create manifest with all project parameters including input files
 Example [here](example/manifest.txt) 
 Note: If running multiple steps (e.g., pie charts and spatial plots), 
 it is a good idea to use one manifest with all parameters needed for both
@@ -22,26 +22,29 @@ parameters needed for each step. The example manifests here are mostly
 separate (i.e., they only have the parameters needed for one step). This will all be
 documented eventually.
 
-### Step 3: Run pipeline or one step at a time
-To generate counts and/or plots of Object Analysis data from Halo, run 
+### Step 3 (if applicable): Run ONLY ONE TIME - Mark exclusions
+Given raw object analysis \*.rda files and exclusion files (including Halo XML, drift summaries
+and FOV annotations), add an EXCLUDE column to data indicating which cells should not be analyzed. 
+If data has already been marked, skip to Step 4.
 ```{r eval=FALSE}
-halo_pipeline.R -m my_project_manifest.txt 
+Rscript scripts/mark_exclusions.R -m example/counts/exclusion_manifest.txt
 ```
-Note: The pipeline currently only runs counts and pie charts.
 
+### Step 3: Run one or more pre-written scripts 
 
-Alternatively, run each step separately. For example,
+## Generate counts of given markers
+WARNING: This script has not been tested recently
 ```{r eval=FALSE}
 Rscript scripts/counts.R -m example/counts/counts_manifest.txt
 ```
-then
+
+## Spatial Plots
+Plot both total density and density by band
 ```{r eval=FALSE}
-Rscript scripts/pie_charts.R -m example/pie_charts/pie_charts_manifest.txt
+Rscript scripts/spatial_plots_2.R -m example/spatial_plots/density_manifest.txt --plotDensity --plotDensityByBand
 ```
 
-### Spatial Plots
-Spatial plots are generated per sample, so for a single sample, "CR", for example, run
-```{r eval=FALSE}
-Rscript scripts/spatial_plots.R -m example/spatial_plots/CR_manifest.txt
-```
-Example shell script to run all samples: example/spatial_plots/run_spatial_plots.R
+NOTES: 
+* Plotting total density has not been tested since modifying and adding code for plotting 
+density by band
+* Other scripts in scripts/ folder also have not been tested recently
