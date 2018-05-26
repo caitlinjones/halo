@@ -29,13 +29,13 @@ Rscript scripts/mark_exclusions.R -m example/counts/exclusion_manifest.txt
 
 ### Step 3: Run one or more pre-written scripts 
 
-#### Generate counts of given markers
+#### * Generate counts of given markers
 WARNING: This script has not been tested recently
 ```{r eval=FALSE}
 Rscript scripts/counts.R -m example/counts/counts_manifest.txt
 ```
 
-#### Spatial Plots
+#### * Spatial Plots
 Plot both total density and density by band
 ```{r eval=FALSE}
 Rscript scripts/spatial_plots_2.R -m example/spatial_plots/density_manifest.txt --plotDensity --plotDensityByBand

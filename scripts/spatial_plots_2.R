@@ -55,9 +55,10 @@ if(!is.null(pp$data_files)){
         dd <- readRDS(df)
         dat <- dat %>% bind_rows(dd)
     }
-    dat$Sample <- gsub("_ObjectAnalysisData","",dat$Sample)
+    #dat$Sample <- gsub("_ObjectAnalysisData","",dat$Sample)
     ### TEMPORARY UNTIL EXCLUSIONS ARE DONE UPSTREAM
-    dat <- filter(dat, !(Sample == "Untreated" & Marker=="CD68" & SPOT %in% c(5, 11,12,13,14, 18, 19, 20, 21, 22, 23, 24)))
+    #dat <- filter(dat, !(Sample == "Untreated" & Marker=="CD68" & SPOT %in% c(5, 11,12,13,14, 18, 19, 20, 21, 22, 23, 24)))
+    dat <- dat %>% filter(EXCLUDE == "")
 }
 
 ## read area files if they exist
@@ -109,7 +110,7 @@ if(args$plotDensityByBand){
                                  maxG=pp$max_g, calcFOVarea=pp$calc_fov_area)
 
     #### TEMPORARY UNTIL FILTERING IS DONE UPSTREAM
-    den <- den %>% filter(!( Sample == "Untreated" & SPOT %in% c(5, 11,12,13,14, 18, 19, 20, 21, 22, 23, 24) & (grepl("^CD68$",CellType) | grepl("CD68,",CellType))))
+    #den <- den %>% filter(!( Sample == "Untreated" & SPOT %in% c(5, 11,12,13,14, 18, 19, 20, 21, 22, 23, 24) & (grepl("^CD68$",CellType) | grepl("CD68,",CellType))))
 
     ## plot plots
     flog.info("Printing plots")

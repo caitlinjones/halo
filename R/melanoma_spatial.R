@@ -88,7 +88,7 @@ calculateBandAreas <- function(allBoundaries,maxG=5,bbData,interfaceBins) {
         interfaceBins <- (-20:20)*10
     }
     tumB <- allBoundaries$tumB
-    excB <- allBoundaries$excB
+    excB <- c(allBoundaries$excB,allBoundaries$epiB,allBoundaries$glsB)
 
     bandArea <- list()
     for(nGrid in 10^((maxG-1):maxG)) {
@@ -230,7 +230,7 @@ removeExcludedPoints <- function(ds,aFile=NULL,excB=NULL) {
     if(is.null(excB)){
         boundaries <- readHaloAnnotations(aFile)
         allBoundaries <- cleanBoundaries(boundaries)
-        excB <- allBoundaries$excB
+        excB <- c(allBoundaries$excB,allBoundaries$glsB,allBoundaries$epiB)
     }
 
     spCells <- ds %>% dplyr::select(UUID,X,Y)
@@ -269,7 +269,7 @@ getBandAssignments <- function(ds,bbData,allBoundaries,interfaceBins=(-20:20)*10
 
     flog.debug("getting boundaries")
     tumB <- allBoundaries$tumB
-    excB <- allBoundaries$excB
+    excB <- c(allBoundaries$excB,allBoundaries$glsB,allBoundaries$epiB)
     if(is.null(tumB) || len(tumB) == 0){
         flog.info("No TUMOR boundaries found in file %s. Skipping.")
         return()
@@ -384,7 +384,6 @@ addMedianErrorBarValues <- function(dat){
 #' @param aFiles              a vector of Halo boundary annotation files, with 
 #'                            '.annotations' extension in XML format
 #' @param data                Halo data for one sample, loaded from *.rda file  
-#' @param pad                 amount to trim from FOV before calculating
 #' @param writeCSVfiles       logical indicating whether to write density and area tables to file; 
 #'                            default=TRUE
 #' @param maxG                the maximum factor of 10 to use for generating random points for area calculation
@@ -395,10 +394,9 @@ addMedianErrorBarValues <- function(dat){
 #'                            stats; default=FALSE 
 #' @return a list containing two tables: 'density' and 'area' 
 #' @export
-calculateInterfaceArea <- function(aFiles, dat, pad, writeCSVfiles=TRUE,
+calculateInterfaceArea <- function(aFiles, dat, writeCSVfiles=TRUE,
                                    maxG=5,outDir=NULL,statsByBand=FALSE,
                                    interfaceBins=(-20:20)*10){
-  pad <- as.numeric(pad)
 
   dd <- dat
   sampleName <- gsub("_ObjectAnalysisData","",unique(dd$Sample))
@@ -414,11 +412,11 @@ calculateInterfaceArea <- function(aFiles, dat, pad, writeCSVfiles=TRUE,
     flog.debug("filtering dataset for spot..")
     ds <- dd %>% filter(SPOT==spot & ValueType=="Positive")
 
-    bbFOV <- getBoundingBox(ds)
-    bbData <- bbFOV
-    if(pad > 0){
-      bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
-    }
+    #bbFOV <- getBoundingBox(ds)
+    #bbData <- bbFOV
+    #if(pad > 0){
+    #  bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
+    #}
     sTag <- cc(sampleName, paste0("Spot",spot,".annotations"))
     aai <- grep(sTag, aFiles)
     if(len(aai) > 0){
@@ -431,7 +429,7 @@ calculateInterfaceArea <- function(aFiles, dat, pad, writeCSVfiles=TRUE,
       ## remove boundaries that are completely contained in another one
       allBoundaries <- cleanBoundaries(boundaries)
       tumB <- allBoundaries$tumB
-      excB <- allBoundaries$excB
+      excB <- c(allBoundaries$excB,allBoundaries$glsB,allBoundaries$epiB)
 
       if(len(tumB) == 0){
         next
@@ -614,16 +612,15 @@ calculateDensity <- function(dat, areas, bandAssignments, markerSet,
 #' @param cellTypeName        a name to represent the cell types in marker file
 #' @param funcMarker          this marker will be added to all markers in markerSet in order to
 #'                            compare cells that are +/- for this functional marker [ TO DO: REWORD THIS ]
-#' @param pad                 amount to trim from FOV before calculating
 #' @param maxG                the maximum factor of 10 to use for generating random points for area calculation
 #' @param writeCSVfiles       logical indicating whether to write density and area tables to file; 
 #' @param outDir              if writeCSVfiles=T, directory to which these files will be written
 #' @return a list containing two tables: 'density' and 'area' 
 #' @export
 calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
-                            pad, maxG, writeCSVfiles=TRUE,
+                            maxG, writeCSVfiles=TRUE,
                             funcMarker=NULL,sortByMarker=NULL,skipTumorSamples=TRUE,outDir){
-  pad <- as.numeric(pad)
+  #pad <- as.numeric(pad)
   dd <- data
   sampleName <- gsub("_ObjectAnalysisData","",unique(dd$Sample))
 
@@ -632,12 +629,13 @@ calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
 
   flog.debug("getting spots")
   spots <- dd %>% dplyr::select(SPOT) %>% distinct(SPOT) %>% arrange(SPOT) %$% as.vector(SPOT)
+  saFiles <- aFiles[grep(paste0(sampleName,"_"),aFiles)]
   for(spot in spots){
     flog.debug("working on spot %s",spot)
 
     flog.debug("checking for annotations file...")
     sTag <- cc(sampleName, paste0("Spot",spot,".annotations"))
-    aai <- grep(sTag, aFiles)
+    aai <- grep(sTag, saFiles)
     tumB <- NULL
     excB <- NULL
 
@@ -650,10 +648,10 @@ calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
       ## remove boundaries that are completely contained in another one
       allBoundaries <- cleanBoundaries(boundaries)
       tumB <- allBoundaries$tumB
-      excB <- allBoundaries$excB
+      excB <- c(allBoundaries$excB,allBoundaries$glsB,allBoundaries$epiB)
     }
 
-    if(len(tumB) > 0 & !skipTumorSamples){
+    if(len(tumB) > 0 & skipTumorSamples){
       flog.debug("SPOT %s contains tumor boundaries. skipping.",spot)
       next ## FOV with tumor boundaries are to be handled by calculateInterfaceArea()      
       ## QUESTION: do we ever want to calculate total density of FOV even if there ARE
@@ -661,11 +659,11 @@ calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
     }
 
     ds <- dd %>% filter(SPOT==spot & ValueType=="Positive")
-    bbFOV <- getBoundingBox(ds)
-    bbData <- bbFOV
-    if(pad > 0){
-      bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
-    }
+    #bbFOV <- getBoundingBox(ds)
+    #bbData <- bbFOV
+    #if(pad > 0){
+    #  bbData <- padBoundingBox(bbFOV,-pad/pixel2um)
+    #}
 
     ds <- convertCellMinMaxToMidpoints(ds) ## this can be done in removeExcludedPoints too 
                                            ## but we need it done even if there arent any
@@ -821,7 +819,7 @@ getMarkerDensityTable <- function(markers, dat=NULL, outDir=getwd(), dataFiles=N
                                                                    dir(annotationsDir))])
 
                 flog.debug("calculating interface area")
-                samp_ia <- calculateInterfaceArea(aFiles, dd, pad, writeCSVfiles=writeCSVfiles,
+                samp_ia <- calculateInterfaceArea(aFiles, dd, writeCSVfiles=writeCSVfiles,
                                                   maxG=maxG, outDir=outDir, statsByBand=byBand,
                                                   interfaceBins=interfaceBins)
 

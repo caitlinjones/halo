@@ -1,9 +1,5 @@
 options(stringsAsFactors=FALSE)
 
-pixel2um <- 0.293
-p2tomm <- pixel2um^2/(1000^2)
-p2toum=pixel2um^2
-
 #' Load data from *.rda file
 #'
 #' Load data for one subsample from one cancer type, and optionally
