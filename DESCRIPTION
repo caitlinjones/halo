@@ -6,6 +6,7 @@ Authors@R: c(person("Nicholas", "Socci", email = "socci@cbio.mskcc.org", role = 
             )
 Description: Analyze and visualize Halo data.
 Depends: R (>= 3.4.3),
+    assertthat,
     contoureR,
     digest,
     futile.logger,

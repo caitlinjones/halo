@@ -4,7 +4,7 @@
 \alias{calculateFOVStats}
 \title{Calculate total area and density of entire FOVs}
 \usage{
-calculateFOVStats(aFiles, data, markerSet, cellTypeName, pad, maxG,
+calculateFOVStats(aFiles, data, markerSet, cellTypeName, maxG,
   writeCSVfiles = TRUE, funcMarker = NULL, sortByMarker = NULL,
   skipTumorSamples = TRUE, outDir)
 }
@@ -17,8 +17,6 @@ calculateFOVStats(aFiles, data, markerSet, cellTypeName, pad, maxG,
 \item{markerSet}{a vector markers to calculate density for}
 
 \item{cellTypeName}{a name to represent the cell types in marker file}
-
-\item{pad}{amount to trim from FOV before calculating}
 
 \item{maxG}{the maximum factor of 10 to use for generating random points for area calculation}
 

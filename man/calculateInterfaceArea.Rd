@@ -4,14 +4,12 @@
 \alias{calculateInterfaceArea}
 \title{Calculate total area and density of tumor interface}
 \usage{
-calculateInterfaceArea(aFiles, dat, pad, writeCSVfiles = TRUE, maxG = 5,
+calculateInterfaceArea(aFiles, dat, writeCSVfiles = TRUE, maxG = 5,
   outDir = NULL, statsByBand = FALSE, interfaceBins = (-20:20) * 10)
 }
 \arguments{
 \item{aFiles}{a vector of Halo boundary annotation files, with 
 '.annotations' extension in XML format}
-
-\item{pad}{amount to trim from FOV before calculating}
 
 \item{writeCSVfiles}{logical indicating whether to write density and area tables to file; 
 default=TRUE}

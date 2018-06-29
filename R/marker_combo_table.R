@@ -1,7 +1,3 @@
-library(tidyverse)
-library(xlsx)
-
-
 #' Find all marker combinations existing in data and count cells that
 #' express each combination and sort combinations by the most to least frequent
 #' 
@@ -10,33 +6,32 @@ library(xlsx)
 #' combination in that row
 #' 
 #' @param dataFiles   vector of *.rda files containing Halo data
-#' @param markerFile  file containing a single identity marker on each line     
+#' @param markers     vector of markers to be counted
 #' @param outFile     name of *.xlsx file to write final tables; default=NULL
 #' @return list of tables, one for all samples and one for each sample
-markerComboCounts <- function(dataFiles, markerFile, outFile=NULL){
+markerComboCounts <- function(markers, dataFiles=NULL, dat=NULL, outFile=NULL){
 
-    samps <- c()
     allSamps <- tibble()
 
-    cellTypeMarkers <- scan(markerFile,"")
+    cellTypeMarkers <- markers 
 
     ## get table of "Positive" values for all cell type markers
     ## rows are cells, columns are Sample,UUID,cellTypeMarkers
-    for(df in dataFiles){
+    if(is.null(dat) && !is.null(dataFiles)){
+        for(df in dataFiles){
+            dat <- bind_rows(dat, readRDS(df))
+            dat$Sample <- gsub("_ObjectAnalysisData","",dat$Sample)
+        }
+    }
+    
+    samps <- unique(dat$Sample)
 
-        dat <- readRDS(df)
-        dat$Sample <- gsub("_ObjectAnalysisData","",dat$Sample)
-        samps <- unique(c(samps, unique(dat$Sample)))
-
-        pTbl <- dat %>%
-                filter(Marker %in% cellTypeMarkers, ValueType=="Positive") %>%
+    allSamps <- dat %>%
+                filter(Marker %in% cellTypeMarkers) %>%
                 mutate(Marker=factor(Marker,levels=cellTypeMarkers)) %>%
                 arrange(Marker) %>%
                 dplyr::select(Sample,UUID, Marker, Value) %>%
                 spread(Marker,Value)
-
-        allSamps <- allSamps %>% bind_rows(pTbl)
-    }
 
     allTbls <- list()
 
@@ -76,136 +71,6 @@ markerComboCounts <- function(dataFiles, markerFile, outFile=NULL){
     return(allTbls)
 }
 
-#' Build a list of all marker combinations described in "complex" combination
-#' format in cell types spreadsheet (described in docs)
-#'
-#' Based on combination type ("ALL", "ANY", "<2", ">3", etc.), generate all
-#' possible combinations of markers given
-#' 
-#' @param comboType  tells what kind of combinations to build ("ALL" indicates
-#'                   all markers given must stay together, "ANY" means any combination
-#'                   of given markers, including all different lengths, and 
-#'                   types like ">2" or "<=3" tells how many markers each combination must 
-#'                   contain
-#' @param markers    vector of markers to combine
-#' @return a list of all possible combinations matching criteria in comboType
-getMarkerCombos <- function(comboType, markers){
-    #if(markers == "TOTAL"){
-        ## handle differently
-    #}
-
-    markers <- unlist(strsplit(markers,","))
-    if(comboType == "ALL"){
-        nums <- length(markers)
-    } else if(comboType == "ANY") {
-        nums <- c(1:length(markers))
-    } else if( length(grep(">=",comboType)) > 0 ){
-        num <- as.integer(gsub(">=","",comboType))
-        nums <- c(num:length(markers))
-    } else if( length(grep("<=",comboType)) > 0 ){
-        num <- as.integer(gsub("<=","",comboType))
-        nums <- c(1:num) 
-    } else if( length(grep(">",comboType)) > 0 ){
-        num <- as.integer(gsub(">","",comboType))
-        nums <- c((num+1):length(markers))
-    } else if( length(grep("<",comboType)) > 0 ){
-        num <- as.integer(gsub("<","",comboType))
-        nums <- c(1:(num-1)) 
-    }
-    mSets <- list()
-    for(i in nums){
-        cmb <- t(combn(sort(markers),m=i))
-        for(c in 1:nrow(cmb)){
-            mSets[[length(mSets)+1]] <- cmb[c,]
-        }
-    }
-    return(mSets)
-}
-
-
-
-getCellTypes <- function(cellTypesFile, unreasonableCombinationsFile){
-
-    simpleTypes <- read.xlsx(cellTypesFile,sheetName="Simple",stringsAsFactors=FALSE)
-    complexTypes <- read.xlsx(cellTypesFile,sheetName="Complex",stringsAsFactors=FALSE)
-    unCombos <- read.xlsx(unreasonableCombinationsFile,sheetIndex=1)
-    conditionalTypes <- NULL
-
-    cellTypes <- simpleTypes
-
-    ## sort combos from simple sheet file
-    for(x in 1:nrow(cellTypes)){
-        combo <- unlist(strsplit(cellTypes$Marker_combination[x],","))
-        cellTypes$Marker_combination[x] <- paste(sort(combo),collapse=",")
-    }
-
-    ## parse complex types into "simple" types by generating all possible
-    ## combinations for the type given
-    for(x in 1:nrow(complexTypes)){
-        ct <- complexTypes[x,]
-        ## pull out conditional types to be parsed later
-        if("TOTAL" %in% c(ct$OF,ct$OF.1)){
-            conditionalTypes <- rbind(conditionalTypes,ct)
-            next
-        } 
-        set1 <- getMarkerCombos(ct$IF,ct$OF)
-        set2 <- getMarkerCombos(ct$MATCHES,ct$OF.1)    
-        allCombos <- expand.grid(set1,set2)
-        finalCombos <- c()
-        for(i in 1:length(allCombos[[1]])){
-            combo <- unique(sort(unlist(c(allCombos[[1]][i],allCombos[[2]][i]))))
-            finalCombos <- c(finalCombos,paste(combo,collapse=","))
-        }
-        finalCombos <- unique(finalCombos)
-        overlaps <- finalCombos[which(finalCombos %in% cellTypes$Marker_combination)]
-        if(length(overlaps) > 0){
-            stop(paste0("\n\nThe following 'Complex' marker combinations also occur in the list of 'Simple' combinations: ",paste(overlaps,collapse="; "),". Please correct and rerun.\n\n"))
-        }
-        cts <- data.frame(Marker_combination = finalCombos, 
-                          Cell_type = rep(ct$CELL_TYPE,length(finalCombos)),
-                          Subtype = rep(ct$CELL_TYPE,length(finalCombos)))
-        cellTypes <- rbind(cellTypes,cts) 
-    }
- 
-    ## parse unreasonable combos matrix to get the "Unknown" combinations
-    rownames(unCombos) <- unCombos[,1]
-    unCombos <- unCombos[,-1]    
-    allUnknowns <- c()
-    for(x in rownames(unCombos)){
-        unknowns <- colnames(unCombos)[which(unCombos[x,] == "Unknown")]
-        if(!is.null(unknowns) & length(unknowns) > 0){
-            combos <- unlist(lapply(unknowns,function(y){ paste(sort(c(y,x)),collapse=",") })) 
-            overlaps <- combos[which(combos %in% cellTypes$Marker_combination)]
-            if(length(overlaps) > 0){
-                stop(paste0("\n\nThe following 'Unknown' marker combinations also occur in the CellTypes xlsx file: ",paste(overlaps,collapse="; "),". Please correct and rerun.\n\n"))
-            }
-            allUnknowns <- c(allUnknowns,combos)
-        }
-    }
-    uc <- data.frame(Marker_combination = sort(allUnknowns),
-                     Cell_type = rep("Unknown", length(allUnknowns)),
-                     Subtype = rep("Unknown", length(allUnknowns)))
-    cellTypes <- rbind(cellTypes,uc)   
-
-    return(list(CellTypes=cellTypes,Conditional=conditionalTypes))
-}
-
-assignCellType <- function(combinationRow,cellTypes,conditionalTypes){
-    markers <- names(combinationRow)[which(combinationRow == "X")]
-    combo <- paste(sort(markers),collapse=",")
-    if(combo %in% cellTypes$Marker_combination){
-        cellType <- cellTypes$Cell_type[which(cellTypes$Marker_combination==combo)]
-    } else if(is.null(markers) | length(markers) == 0){
-        cellType <- "NEGATIVE"
-    } else if(combo %in% conditionalTypes$Marker_combination){
-        cellType <- "NOT SURE YET"   
-    } else {
-        ## all combos not in cell types file are considered unreasonable for now
-        cellType <- "Unreasonable"
-    }
-    return(cellType)
-}
-
 #' Interpret marker combinations
 #' 
 #' Given a file of cell types defined by certain marker combinations (format
@@ -220,11 +85,8 @@ assignCellType <- function(combinationRow,cellTypes,conditionalTypes){
 #'                                "unknown" pairwise marker combinations
 #' @param outFile                 if given, markerComboCounts table with interpretations
 #'                                added will be printed to this file
-interpretMarkerCombos <- function(markerComboCts, cellTypesFile,
-                                  unreasonableCombosFile, outFile=NULL){
+interpretMarkerCombos <- function(markerComboCts, allCellTypes, outFile=NULL){
 
-    allCellTypes <- getCellTypes(cellTypesFile, unreasonableCombosFile)
-    
     cellTypes <- allCellTypes$CellTypes
     conditionalTypes <- allCellTypes$Conditional
 
@@ -271,9 +133,6 @@ interpretMarkerCombos <- function(markerComboCts, cellTypesFile,
 #' @return a completely styled XLSX workbook
 markerComboWorkbook <- function(allTbls, cellTypes){
 
-    ## tmp
-    cellTypes <- sort(c("Tumor","Macrophage","NEGATIVE","UNKNOWN",
-                      "Unreasonable","T cell","B cell", "Natural killer cell"))
     ## alternating background colors for different cell types
     cellTypeColors <- rep(9,length(cellTypes)) # white
     cellTypeColors[which(1:length(cellTypes) %% 2 == 0)] <- 55 #grey
@@ -295,9 +154,9 @@ markerComboWorkbook <- function(allTbls, cellTypes){
 
     for(t in 1:length(allTbls)){
         s <- names(allTbls)[t]
-print(s)
         tbl <- allTbls[[s]]
-        sheet <- createSheet(wb, sheetName = s)
+        if(grepl("by_cell_type",s)){ s <- gsub("by_cell_type","by_type",s) }
+        sheet <- createSheet(wb=wb, sheetName=s)
         interpCol <- which(names(tbl)=="Interpretation") 
         countCol <- which(names(tbl)=="Count")
         totalsRows <- which(is.null(tbl$CUM.PCT)|nchar(tbl$CUM.PCT)==0)
@@ -329,7 +188,6 @@ print(s)
                 for(r in ctRows){ rowIdxs <- c(rowIdxs,rep(r+1,ncol(tbl))) }
 
                 colIdxs <- rep(1:ncol(tbl), length(ctRows))
-
                 fill <- Fill(backgroundColor=cellTypeColors[x])
                 cb <- CellBlock(sheet, ctRows[1]+1, 1, length(ctRows), ncol(tbl), create=FALSE)
                 CB.setFill(cb, fill, rowIdxs, colIdxs)

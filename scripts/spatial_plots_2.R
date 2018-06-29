@@ -55,9 +55,6 @@ if(!is.null(pp$data_files)){
         dd <- readRDS(df)
         dat <- dat %>% bind_rows(dd)
     }
-    #dat$Sample <- gsub("_ObjectAnalysisData","",dat$Sample)
-    ### TEMPORARY UNTIL EXCLUSIONS ARE DONE UPSTREAM
-    #dat <- filter(dat, !(Sample == "Untreated" & Marker=="CD68" & SPOT %in% c(5, 11,12,13,14, 18, 19, 20, 21, 22, 23, 24)))
     dat <- dat %>% filter(EXCLUDE == "")
 }
 
@@ -108,9 +105,6 @@ if(args$plotDensityByBand){
                                  bandWidth=pp$band_width, markerSetName=pp$marker_set_name, 
                                  sortByMarker=pp$sort_by_marker, funcMarker=pp$func_arker,
                                  maxG=pp$max_g, calcFOVarea=pp$calc_fov_area)
-
-    #### TEMPORARY UNTIL FILTERING IS DONE UPSTREAM
-    #den <- den %>% filter(!( Sample == "Untreated" & SPOT %in% c(5, 11,12,13,14, 18, 19, 20, 21, 22, 23, 24) & (grepl("^CD68$",CellType) | grepl("CD68,",CellType))))
 
     ## plot plots
     flog.info("Printing plots")

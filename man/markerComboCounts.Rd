@@ -5,12 +5,12 @@
 \title{Find all marker combinations existing in data and count cells that
 express each combination and sort combinations by the most to least frequent}
 \usage{
-markerComboCounts(dataFiles, markerFile, outFile = NULL)
+markerComboCounts(dataFiles, markers, outFile = NULL)
 }
 \arguments{
 \item{dataFiles}{vector of *.rda files containing Halo data}
 
-\item{markerFile}{file containing a single identity marker on each line}
+\item{markers}{vector of markers to be counted}
 
 \item{outFile}{name of *.xlsx file to write final tables; default=NULL}
 }

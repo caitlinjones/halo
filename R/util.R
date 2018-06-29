@@ -179,11 +179,7 @@ initializeProject <- function(file,type="counts"){
     ## set defaults for all projects
     pp <- list( log=NULL, 
                 debug=FALSE,
-                pad=30,
-                exclude_sample_fov=NULL,
-                exclude_sample=NULL,
-                exclude_fov=NULL,
-                exclude_marker=NULL )
+                pad=20)
 
     countsPP <- list( markers=NULL,
                       data_dir=NULL,
@@ -236,41 +232,7 @@ initializeProject <- function(file,type="counts"){
         #warning("No defaults were set. Relying completely on manifest file for ALL settings.")
       }, error = function(e){
         flog.debug("File not in YAML format. Reading manifest in tab-delimited format") 
-        #print(e)
-        man <- read.delim(file, sep="\t", comment.char="#", header=FALSE, stringsAsFactors=FALSE)[,c(1,2)]
-        for(x in 1:nrow(man)){
-            if(man[x,2] %in% c("TRUE","FALSE")){
-                pp[[man[x,1]]] <- ifelse(man[x,2] == "TRUE",TRUE,FALSE)
-            } else if(man[x,2] == "NULL"){
-                pp[[man[x,1]]] <- NULL
-            } else if(length(grep(";;",man[x,2])) > 0){
-                tmp <- parseManifestList(man[x,2])
-                for(n in names(tmp)){
-                    if(length(grep(",",tmp[[n]])) == 0){
-                        tmp[[n]] <- type.convert(tmp[[n]],as.is=TRUE)
-                    }
-                }
-                pp[[man[x,1]]] <- tmp
-            } else if(length(grep(",",man[x,2])) > 0){
-                tmp <- trimws(unlist(strsplit(man[x,2],",")))
-                for(n in 1:length(tmp)){
-                    tmp[n] <- type.convert(tmp[n],as.is=TRUE)
-                }
-                pp[[man[x,1]]] <- trimws(unlist(strsplit(man[x,2],",")))
-            } else {
-                pp[[man[x,1]]] <- type.convert(man[x,2],as.is=TRUE)
-            }
-            ## add '#' to hex colors
-            if(length(grep("color",man[x,1],ignore.case=TRUE)) > 0){
-                if(is.list(pp[[man[x,1]]])){
-                    for(n in names(pp[[man[x,1]]])){
-                        pp[[man[x,1]]][[n]] <- paste0("#",pp[[man[x,1]]][[n]])
-                    }
-                } else {
-                    pp[[man[x,1]]] <- paste0("#",pp[[man[x,1]]])
-                }
-            }
-        }
+        print(e)
         pp
     }, finally = {
         pp
@@ -295,74 +257,6 @@ initializeProject <- function(file,type="counts"){
 
     return(pp)
 }
-
-#' Remove from counts tibble any FOV to be excluded
-#'
-#' Filter data to exclude specific FOV for specific samples
-#' 
-#' @param dat                   counts tibble from countMarkers()
-#' @param exclude_sample        comma separated string of samples to exclude completely; i.e., all FOV
-#'                              and all markers
-#' @param exclude_marker        comma separated string of markers to exclude completely; i.e., all FOV
-#'                              in all samples
-#' @param exclude_sample_marker a string of exclusions in the form: Sample1:CD3+CD4+TGM2,Sample2:CD20
-#' @param exclude_sample_fov    a string of exclusions in the form: Sample1:3+5+9,Sample2:1+16+22
-#' @export
-removeExclusions <- function(dat, exclude_sample=NULL, exclude_marker=NULL, exclude_sample_marker=NULL,
-                                  exclude_sample_fov=NULL){
-   
-    ## remove specific FOV from specific samples  
-    if(!is.null(exclude_sample_fov)){
-
-        ## at some points the data has "SPOT" and at some is has "FOV"
-        if("SPOT" %in% names(dat)){
-            fovH <- "SPOT" 
-        } else if ("FOV" %in% names(dat)){
-            fovH <- "FOV"
-        } else if(is.null(exclude_sample_fov)){
-            flog.fatal("Data does not contain either SPOT or FOV in the header. Can not remove FOV exclusions")
-            stop("Data does not contain either SPOT or FOV in the header. Can not remove FOV exclusions")
-        }
-
-        for(samp in names(exclude_sample_fov)){
-            fovEx <- exclude_sample_fov[[samp]]
-            flog.info("Removing samp %s, FOV %s",samp,fovEx)
-            dat <- filter(dat, !(Sample == samp & get(fovH) %in% fovEx))
-        }
-
-    } else if(!is.null(exclude_sample_marker)){
-
-        warning("\n\nREMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY 
-MARKER COMBINATION WITH THAT/THOSE INDIVIDUAL MARKER(S)\n\n")
-        for(samp in names(exclude_sample_marker)){
-            mEx <- exclude_sample_marker[[samp]] 
-            flog.info("WARNING: REMOVED ONE OR MORE MARKERS FROM DATA. THIS INCLUDES ANY MARKER COMBINATION
-                 WITH THAT/THOSE INDIVIDUAL MARKER(S)")
-            flog.info("Setting count(s) for %s marker %s to NA",samp,mEx)
-            for(m in mEx){
-                dat[which(dat$Sample == samp),grep(paste0("(^|,)",m,"-*(,|$)"),names(dat))] <- NA
-            }
-        }
-
-    } else if(!is.null(exclude_sample)){
-
-        flog.info("Removing sample(s) %s from ALL markers",exclude_sample)
-        exclude_sample <- trimws(unlist(strsplit(exclude_sample,",")))
-        dat <- filter(dat, !Sample %in% exclude_sample)
-
-    } else if(!is.null(exclude_marker)){
-
-        flog.info("Removing marker(s) %s from ALL samples", exclude_marker)
-        exclude_marker <- trimws(unlist(strsplit(exclude_marker,",")))
-        for(em in exclude_marker){
-            dat <- dplyr::select(dat, -grep(paste0("(^|,)",em,"-*(,|$)")))
-        }
-
-    }
-    return(dat)
-}
-
-
 
 #' Generate name of output file for marker stats based on 
 #' input file names
@@ -398,32 +292,6 @@ projectFileName <- function(markerFile,dataFiles,pad,type){
     }
     outFile <- paste0(outFile,".",type)
     return(outFile)
-}
-
-#' Convert manifest value string to list
-#'
-#' Lists can be written out in the manifest in the following form:
-#'   Name1:val1,Name2:val1+val2,Name3:val1+val2+val3
-#' This function parses this string to give the following list:
-#'   list(Name1=val1, Name2=c(val1,val2), Name3=c(val1,val2,val3))
-#'
-#' @param listString    string representing the list to be returned
-#' @return list form of the string given
-#' @export
-parseManifestList <- function(listString){
-    manList <- list()
-    listElements <- trimws(unlist(strsplit(listString,";;")))
-    for(le in listElements){
-        tmp <- trimws(unlist(strsplit(le,":")))
-        nm <- tmp[1]
-        val <- tmp[2]
-        if(nm %in% names(manList)){
-            flog.fatal("Element %s occurs in list string multiple times. Please correct manifest.",nm)
-            stop(paste0("Element ",nm, " occurs in list string multiple times. Please correct manifest."))
-        }
-        manList[[nm]] <- trimws(unlist(strsplit(val,"\\+")))
-    }
-    manList    
 }
 
 
