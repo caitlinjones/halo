@@ -29,6 +29,8 @@ each interval}
 \item{summarize}{logical; print summary plots, showing density of ALL FOV together; default=TRUE}
 
 \item{stacked}{logical; for plots with all exclusive markers, print stacked bar plots; default=TRUE}
+
+\item{areaDat}{tibble containing area data for all Samples, FOVs and Bands}
 }
 \value{
 nothing

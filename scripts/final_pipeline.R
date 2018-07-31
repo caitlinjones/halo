@@ -27,13 +27,12 @@ parser$add_argument("-m", "--manifest", type="character", default=NULL,
                     help="file containing all project parameters; run ?initializeProject for details")
 parser$add_argument("-e", "--markExclusions", action="store_true", default=FALSE,
                     help="raw *.rda files are being given; mark exclusions based on meta data")
-parser$add_argument("-s", "--start", type="character", default="pre-rethreshold", 
-                    help="Options: ['pre-rethreshold'|'post-rethreshold']; starting point for pipeline")
+parser$add_argument("-fp", "--forcePlotting", action="store_true", default=FALSE,
+                    help="rerun all plotting regardless of whether data has changed")
 parser$add_argument("--debug", action="store_true", default=FALSE,
                     help="print extra output for debugging")
 
 args <- parser$parse_args()
-if(!args$start %in% c("pre-rethreshold","post-rethreshold")){ stop(paste0("Unrecognized start point: ",args$start)) }
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 updatedExclusions <- FALSE
@@ -42,7 +41,6 @@ updatedFOVarea <- FALSE
 updatedFOVdensity <- FALSE
 updatedInfiltrationArea <- FALSE
 updatedInfiltrationDensity <- FALSE
-updatedThresholds <- FALSE
 
 ################################################
 ####           INITIALIZE PROJECT           ####
@@ -143,94 +141,99 @@ if(args$markExclusions || updatedBoundaries){
     cellDive.updateManifest(pp, args$manifest)
 }
 
-if(args$start == 'pre-rethreshold' || updatedExclusions){
-    print("Starting pre-rethreshold analysis")
-    ###
-    ### read in all data with exclusions (before rethresholding)
-    ###
-    ## if only potting and density has already been calculated, no need to load data
-    allDat <- NULL
-    if(updatedExclusions || updatedBoundaries || !"raw_marker_combo_table_file" %in% names(pp) || is.null(pp$raw_marker_combo_table_file) ||
-        length(pp$raw_marker_combo_table_file) == 0 || !file.exists(pp$raw_marker_combo_table_file)){
-        allDat <- cellDive.loadAllData(pp,"data")
-    }
-    ###
-    ### make RAW combination table
-    ###
-    lst <- cellDive.writeMarkerComboTables(pp, allDat, "raw_marker_combo_table_file", ctCfg, updatedExclusions)
-    allTbls <- lst$dat
-    updatedComboTable <- lst$updated
-    pp <- lst$pp
-    cellDive.updateManifest(pp, args$manifest)
+print("Starting analysis")
+###
+### read in all data with exclusions (before rethresholding)
+###
+## if only potting and density has already been calculated, no need to load data
+allDat <- NULL
+if(updatedExclusions || updatedBoundaries || !"raw_marker_combo_table_file" %in% names(pp) || is.null(pp$raw_marker_combo_table_file) ||
+    length(pp$raw_marker_combo_table_file) == 0 || !file.exists(pp$raw_marker_combo_table_file)){
+    allDat <- cellDive.loadAllData(pp,"data")
+}
+###
+### make RAW combination table
+###
+lst <- cellDive.writeMarkerComboTables(pp, allDat, "raw_marker_combo_table_file", ctCfg, updatedExclusions)
+allTbls <- lst$dat
+updatedComboTable <- lst$updated
+pp <- lst$pp
+cellDive.updateManifest(pp, args$manifest)
 
-    ###
-    ### total FOV areas
-    ###
-    print("Getting total FOV areas...")
-    lst <- cellDive.calculateTotalFOVarea(allDat, pp, metaFiles, updatedExclusions, allHaloAnnotations=allHaloAnnotations)
-    fovAreas <- lst$dat
-    pp <- lst$pp
-    updatedFOVarea <- lst$updated
-    cellDive.updateManifest(pp, args$manifest)
+###
+### total FOV areas
+###
+print("Getting total FOV areas...")
+lst <- cellDive.calculateTotalFOVarea(allDat, pp, metaFiles, updatedExclusions, allHaloAnnotations=allHaloAnnotations)
+fovAreas <- lst$dat
+pp <- lst$pp
+updatedFOVarea <- lst$updated
+cellDive.updateManifest(pp, args$manifest)
 
-    ###
-    ### total FOV densities
-    ###
-    print("Getting total FOV densities...")
-    if(is.null(allDat) &&  (!"fov_density_file" %in% names(pp) || length(pp$fov_density_file) == 0 || !file.exists(pp$fov_density_file) || updatedFOVarea)) {
-        allDat <- cellDive.loadAllData(pp,"data")
-    } 
-    parsedMarkerConfig <- getMarkerConfig(pp$marker_analysis_config_file, pp$plot_config_file)
-    lst <- cellDive.calculateTotalFOVdensity(allDat, parsedMarkerConfig, fovAreas, pp, updatedFOVarea, updatedComboTable)
-    fovDensity <- lst$dat
-    pp <- lst$pp
-    updatedFOVdensity <- lst$updated
-    cellDive.updateManifest(pp, args$manifest)
+###
+### total FOV densities
+###
+print("Getting total FOV densities...")
+if(is.null(allDat) &&  (!"fov_density_file" %in% names(pp) || length(pp$fov_density_file) == 0 || !file.exists(pp$fov_density_file) || updatedFOVarea)) {
+    allDat <- cellDive.loadAllData(pp,"data")
+} 
+parsedMarkerConfig <- getMarkerConfig(pp$marker_analysis_config_file, pp$plot_config_file)
+lst <- cellDive.calculateTotalFOVdensity(allDat, parsedMarkerConfig, fovAreas, pp, updatedFOVarea, updatedComboTable)
+fovDensity <- lst$dat
+pp <- lst$pp
+updatedFOVdensity <- lst$updated
+cellDive.updateManifest(pp, args$manifest)
 
-    ###
-    ### plot total FOV densities
-    ###
-    if(updatedFOVdensity){
-        print("Printing total FOV density plots...")
-        printTotalDensityPlots(fovDensity, fovAreas, parsedMarkerConfig, yScaleConsistency="population", absoluteDensity=TRUE,
-                              densityPercentage=FALSE, byFOV=FALSE, summarize=FALSE, stacked=FALSE,
-                              sampleOrder=NULL, separateLegend=TRUE, outDir=pp$fov_density_dir)
-    } else {
-        print("No changes to total FOV densities. No plotting necessary.")
-    }
+###
+### plot total FOV densities
+###
+if(updatedFOVdensity || args$forcePlotting){
+    print("Printing total FOV density plots...")
+    printTotalDensityPlots(fovDensity, fovAreas, parsedMarkerConfig, yScaleConsistency="population", absoluteDensity=TRUE,
+                           densityPercentage=FALSE, byFOV=FALSE, summarize=FALSE, stacked=FALSE,
+                           sampleOrder=NULL, separateLegend=TRUE, outDir=pp$fov_density_dir)
+} else {
+    print("No changes to total FOV densities. No plotting necessary.")
+}
 
-    ###
-    ### infiltration 
-    ###
-    if(is.null(allDat) && (!"infiltration_density_file" %in% names(pp) || length(pp$infiltration_density_file) == 0 ||
-        !file.exists(pp$infiltration_density_file) || updatedInfiltrationArea)){
-        print("Reading all halo data...")
-        allDat <- cellDive.loadAllData(pp,"data")
-    }
+###
+### infiltration 
+###
+if(is.null(allDat) && (!"infiltration_density_file" %in% names(pp) || length(pp$infiltration_density_file) == 0 ||
+    !file.exists(pp$infiltration_density_file) || updatedInfiltrationArea)){
+    print("Reading all halo data...")
+    allDat <- cellDive.loadAllData(pp,"data")
+}
 
-    ###
-    ### infiltration areas 
-    ###
-    print("Getting infiltration areas...")
-    lst <- cellDive.calculateInfiltrationArea(allDat, pp, haloAnnotations, updatedExclusions)
-    infiltrationAreas <- lst$dat$area
-    bandAssignments <- lst$dat$bandAssignments
-    pp <- lst$pp
-    updatedInfiltrationArea <- lst$updated
-    cellDive.updateManifest(pp, args$manifest)
+###
+### infiltration areas 
+###
+print("Getting infiltration areas...")
+lst <- cellDive.calculateInfiltrationArea(allDat, pp, haloAnnotations, updatedExclusions)
+infiltrationAreas <- lst$dat$area
+bandAssignments <- lst$dat$bandAssignments
+pp <- lst$pp
+updatedInfiltrationArea <- lst$updated
+cellDive.updateManifest(pp, args$manifest)
 
-    ###
-    ### infiltration densities
-    ###
-    print("Getting infiltration densities...")
-    parsedMarkerConfig <- getMarkerConfig(pp$marker_analysis_config_file, pp$plot_config_file)
-    lst <- cellDive.calculateInfiltrationDensity(parsedMarkerConfig, infiltrationAreas, bandAssignments, pp, updatedInfiltrationArea)
-    infiltrationDensity <- lst$dat
-    pp <- lst$pp
-    updatedInfiltrationDensity <- lst$updated
-    cellDive.updateManifest(pp, args$manifest)
+###
+### infiltration densities
+###
+print("Getting infiltration densities...")
+parsedMarkerConfig <- getMarkerConfig(pp$marker_analysis_config_file, pp$plot_config_file)
+lst <- cellDive.calculateInfiltrationDensity(parsedMarkerConfig, infiltrationAreas, bandAssignments, pp, updatedInfiltrationArea)
+infiltrationDensity <- lst$dat
+pp <- lst$pp
+updatedInfiltrationDensity <- lst$updated
+cellDive.updateManifest(pp, args$manifest)
 
-printInfiltrationDensityPlots(infiltrationDensity, bandWidth=pp$band_width, parsedMarkerConfig, yScaleConsistency="population", absoluteDensity=TRUE, densityPercentage=TRUE, byFOV=TRUE, summarize=TRUE, stacked=TRUE, sampleOrder=NULL, separateLegend=TRUE, infiltrationAreas=infiltrationAreas, bandAssignments=bandAssignments, outDir=pp$infiltration_density_dir)
-
+###
+### plot infiltration densities
+###
+if(updatedInfiltrationDensity || args$forcePlotting){
+    printInfiltrationDensityPlots(infiltrationDensity, bandWidth=pp$band_width, parsedMarkerConfig, 
+    yScaleConsistency="population", absoluteDensity=TRUE, densityPercentage=TRUE, byFOV=TRUE, 
+    summarize=TRUE, stacked=TRUE, sampleOrder=NULL, separateLegend=TRUE, infiltrationAreas=infiltrationAreas, 
+    bandAssignments=bandAssignments, outDir=pp$infiltration_density_dir)
 }
 

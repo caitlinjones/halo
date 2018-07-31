@@ -5,11 +5,10 @@
 \title{Get counts of cells that fall within given distances of
 tumor boundaries for a single FOV}
 \usage{
-getBandAssignments(ds, bb, allBoundaries, interfaceBins = (-20:20) * 10)
+getBandAssignments(ds, bb, allBoundaries, interfaceBins = (-36:36) * 10)
 }
 \arguments{
-\item{ds}{a tibble containing data for one FOV, including columns
-for X, Y, and one for each marker}
+\item{ds}{a tibble containing data for one FOV}
 
 \item{bb}{a list containing X0,X1,Y0,Y1 representing the boundary
 of the trimmed FOV}

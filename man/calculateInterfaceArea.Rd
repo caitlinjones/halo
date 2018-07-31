@@ -6,7 +6,7 @@
 \usage{
 calculateInterfaceArea(dat, aFiles = NULL, haloAnnotations = NULL,
   writeCSVfiles = TRUE, maxG = 5, outDir = NULL,
-  interfaceBins = (-20:20) * 10)
+  interfaceBins = (-36:36) * 10)
 }
 \arguments{
 \item{aFiles}{a vector of Halo boundary annotation files, with 

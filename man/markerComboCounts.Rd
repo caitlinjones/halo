@@ -5,7 +5,8 @@
 \title{Find all marker combinations existing in data and count cells that
 express each combination and sort combinations by the most to least frequent}
 \usage{
-markerComboCounts(markers, dataFiles = NULL, dat = NULL, outFile = NULL)
+markerComboCounts(markers, dataFiles = NULL, dat = NULL, outFile = NULL,
+  oneSheet = TRUE)
 }
 \arguments{
 \item{markers}{vector of individual markers to be counted}
