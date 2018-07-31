@@ -4,14 +4,14 @@
 \alias{computeBandAreasMC}
 \title{Compute band areas for each interface bin}
 \usage{
-computeBandAreasMC(tumorBoundariesList, bbData, interfaceBins, nGrid = 100,
+computeBandAreasMC(tumorBoundariesList, bb, interfaceBins, nGrid = 100,
   maxSeg = 1000, exclusionB)
 }
 \arguments{
 \item{tumorBoundariesList}{a list where each element is a tibble containing tumor boundaries
 returned from readHaloAnnotations()}
 
-\item{bbData}{a list containing X0,X1,Y0,Y1 representing the boundary
+\item{bb}{a list containing X0,X1,Y0,Y1 representing the boundary
 of the trimmed FOV}
 
 \item{interfaceBins}{vector of distances (integers) that define each band; default = (-20:20)*10}

@@ -4,8 +4,8 @@
 \alias{getAreaPerBand}
 \title{Compute lattice of boundary bins}
 \usage{
-getAreaPerBand(allBoundaries, sample, fov, maxG, outDir = NULL,
-  bbData = NULL, writeCSVfiles = FALSE, interfaceBins = NULL)
+getAreaPerBand(allBoundaries, sample, fov, maxG, outDir = NULL, bb = NULL,
+  writeCSVfiles = FALSE, interfaceBins = NULL)
 }
 \arguments{
 \item{sample}{sample name}
@@ -16,7 +16,7 @@ getAreaPerBand(allBoundaries, sample, fov, maxG, outDir = NULL,
 
 \item{outDir}{if writeCSVfiles=TRUE, files will be written here}
 
-\item{bbData}{a list containing X0,X1,Y0,Y1 representing the boundary
+\item{bb}{a list containing X0,X1,Y0,Y1 representing the boundary
 of the trimmed FOV}
 
 \item{writeCSVfiles}{write lattice band area file in csv format; default=FALSE}

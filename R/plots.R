@@ -479,10 +479,31 @@ getPlotTheme <- function(plotType){
                   strip.text.x = element_text(size=12, margin=margin(.1, .1, .1, .1, "cm")),
                   strip.placement = "outside",
                   plot.background = element_blank(),
-                  plot.title = element_text(size=20, margin=margin(b=0.5, t=0.2, r=0, l=0.1, "cm"))
-                  #panel.background = element_blank(),
-                  #panel.grid.major = element_blank(),
-                  #panel.grid.minor = element_blank()
+                  plot.title = element_text(size=20, margin=margin(b=0.5, t=0.2, r=0, l=0.1, "cm")),
+                  panel.background = element_blank(),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank()
+                  )
+               )
+    }
+
+    if(plotType == "total FOV density"){
+        return(theme(legend.title = element_blank(),
+                  legend.position = "right",
+                  legend.text = element_text(size=12),
+                  axis.text = element_text(size=12),
+                  axis.text.x = element_text(size=8,hjust=1,angle=45),
+                  axis.title.y = element_text(size=14),
+                  axis.title.x = element_text(size=14),
+                  axis.ticks = element_blank(),
+                  axis.line = element_line(color = "black", size=0.75),
+                  strip.text.x = element_text(size=12, margin=margin(.1, .1, .1, .1, "cm")),
+                  strip.placement = "outside",
+                  plot.background = element_blank(),
+                  plot.title = element_text(size=20, margin=margin(b=0.5, t=0.2, r=0, l=0.1, "cm")),
+                  panel.background = element_blank(),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank()
                   )
                )
     }
@@ -547,7 +568,6 @@ plotInfiltrationDensity <- function(mDen, densityMarkers, bandWidth, clrs, plotT
         names(clrs) <- unique(mDen$CellTypeLabels)
     } 
 
-
     ## spread density table to get to get a column for each cell type
     ## TO DO: MAKE SURE UPSTREAM THAT LABELS WILL BE UNIQUE; UNTIL THEN, JUST
     ## USE CELLTYPE AND ABANDON LABELS
@@ -591,8 +611,8 @@ plotInfiltrationDensity <- function(mDen, densityMarkers, bandWidth, clrs, plotT
          geom_bar(stat="identity", position="stack", color="black", size=0.05, width=0.75) +
          plotTheme +
          scale_fill_manual(values=clrs, labels=names(clrs)) +
-         scale_x_discrete(breaks=c(-355,-305,-205,-105,-5,95,195,295,355),
-                          labels=c("-360","-300","-200","-100","0","100","200","300","360"),
+         scale_x_discrete(breaks=c(-305,-205,-105,-5,95,195,295),
+                          labels=c("-300","-200","-100","0","100","200","300"),
                           expand = c(0.04, 0)) +
          ylab(yAxisTitle) +
          xlab(xAxisTitle) +
@@ -632,6 +652,112 @@ plotInfiltrationDensity <- function(mDen, densityMarkers, bandWidth, clrs, plotT
         flog.debug("printing plot")
         print(p1)
     }
+}
+
+plotTotalFOVMarkerDensity <- function(mDen, densityMarkers, clrs, plotTitle="", cellTypeLabels=NULL, sampleOrder=NULL,
+                               yMax=NULL, separateLegend=FALSE, printLegend=TRUE, legendOnly=FALSE, yCol="Total",
+                               pct=FALSE, facetByFOV=TRUE, facetByCellType=FALSE, yAxisTitle="Density (counts/mm^2)",
+                               xAxisTitle="Sample"){
+
+    selVars <- c("Sample","CellTypeLabels",yCol)
+    if(facetByFOV){
+        selVars <- c(selVars, "SPOT")
+    }
+    flog.debug("setting up labels")
+    mDen$CellTypeLabels <- as.vector(unlist(mDen$CellType))
+    if(!is.null(cellTypeLabels)){
+        for(x in names(cellTypeLabels)){
+            mDen$CellTypeLabels[which(mDen$CellType == x)] <- cellTypeLabels[[x]]
+        }
+    }
+
+    if(is.null(clrs)){
+        clrs <- rep("grey",length(unique(mDen$CellTypeLabels)))
+        names(clrs) <- unique(mDen$CellTypeLabels)
+    }
+ 
+    ## spread density table to get to get a column for each cell type
+    mt <- tryCatch({ mDen %>%
+                     dplyr::select_(.dots = selVars)
+           },   err = function(){ mDen$CellTypeLabels <- mDen$CellType
+                                  mDen %>%
+                                  dplyr::select_(.dots = selVars)
+         })
+    if(!yCol == "Total"){
+        mt$Total <- mt[[yCol]]
+    }
+    if(facetByFOV){ 
+        mt <- mt %>% group_by(Sample,SPOT,CellTypeLabels) %>% summarise(SampleTotal=sum(Total))
+    } else {
+        mt <- mt %>% group_by(Sample,CellTypeLabels) %>% summarise(SampleTotal=sum(Total)) 
+    }
+    mt <- mt %>% spread(CellTypeLabels, SampleTotal)
+
+    ## if faceting by FOV, mt includes SPOT but if not, it doesn't
+    firstCol <- ifelse(facetByFOV, 3, 2)
+    mtd <- gather(mt, firstCol:ncol(mt), key="CellType", value="Density")
+
+    ## sort samples and FOV
+    if(!is.null(sampleOrder)){
+        flog.debug("Sorting samples in this order: %s", paste(sampleOrder,   collapse=", "))
+        mtd$Sample2 <- factor(mtd$Sample, levels=sampleOrder)
+    }
+    if(facetByFOV){
+        mtd$SPOT2 <- factor(mtd$SPOT, levels=sort(unique(as.vector(mtd$SPOT))))
+    }
+
+    if(!is.null(cellTypeLabels)){
+        mtd$CellTypeLabels <- factor(mtd$CellType, levels=names(clrs))
+    } else {
+        mtd$CellTypeLabels <- factor(mtd$CellType)
+    }
+
+    ## finally, PLOT! 
+    flog.debug("getting plot theme")
+    plotTheme <- getPlotTheme("total FOV density")
+    flog.debug("plotting")
+    p1 <- ggplot(mtd, aes(x=Sample, y=Density, fill=CellTypeLabels)) +
+         geom_bar(stat="identity", position="stack", color="black", size=0.05, width=0.75) +
+         plotTheme +
+         scale_fill_manual(values=clrs, labels=names(clrs)) +
+         ylab(yAxisTitle) +
+         xlab(xAxisTitle) +
+         labs(title=plotTitle) #+
+         #theme(axis.text.x = element_text(hjust=0),
+         #      panel.grid.major.x=element_blank())
+
+    if(facetByFOV & facetByCellType){
+        p1 <- p1 + facet_wrap(SPOT2 ~ CellType, ncol=3)
+    } else if(facetByFOV){
+        p1 <- p1 + facet_wrap(~SPOT2, ncol=3)
+    } else if(facetByCellType){
+        p1 <- p1 + facet_wrap(~CellTypeLabel, ncol=3)
+    } else {
+        p1 <- p1 + theme(axis.text.x = element_text(size=14))
+    }
+
+    if(pct){
+        p1 <- p1 + scale_y_continuous(labels = scales::percent, expand = c(0,0))
+    } else {
+        if(is.null(yMax)){
+            yMax <- max(mtd$Density)*1.1
+        }
+        p1 <- p1 + scale_y_continuous(limits = c(0,yMax), expand=c(0,0))
+    }
+    if(separateLegend | legendOnly){
+        flog.debug("getting legend")
+        legend <- g_legend(p1)
+        if(printLegend & length(unique(mtd$CellType)) > 1){
+            flog.debug("drawing legend")
+            grid.draw(legend)
+        }
+        p1 <- p1 + theme(legend.position="none")
+    }
+    if(!legendOnly){
+        flog.debug("printing plot")
+        print(p1)
+    }
+
 }
 
 #' Box plots of densities showing differences between samples for different cell types
@@ -864,7 +990,8 @@ print(paste0('making plot for marker ',marker,', sample ',samp))
 #' Print density plots
 #'
 #' @param den                tibble containing densities for all markers to be plotted
-#' @param config             configuration of plots (already parsed)
+#' @param areaDat            tibble containing area data for all Samples, FOVs and Bands
+#' @param config             tibble containing marker configureation (returned from getMarkerConfig())
 #' @param bandWidth          if plotting by distance intervals from infiltration boundary, this is the size of 
 #'                           each interval
 #' @param yScaleConsistency  level on which y-scales should be the same; choices: ["byPopulation"|"all"|"markerSet"]
@@ -875,24 +1002,25 @@ print(paste0('making plot for marker ',marker,', sample ',samp))
 #' @param stacked            logical; for plots with all exclusive markers, print stacked bar plots; default=TRUE
 #' @return nothing 
 #' @export
-printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="population", absoluteDensity=TRUE,
+printInfiltrationDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="population", absoluteDensity=TRUE,
                               densityPercentage=TRUE, byFOV=TRUE, summarize=TRUE, stacked=TRUE,
-                              sampleOrder=NULL, separateLegend=TRUE){
+                              sampleOrder=NULL, separateLegend=TRUE, infiltrationAreas=NULL, bandAssignments=NULL,outDir=getwd()){
+
+    ia <- infiltrationAreas %>% gather(3:ncol(infiltrationAreas), key="Band", value="Area")
+
+    if(!"Density" %in% names(den) && "Total" %in% names(den)){
+        den <- den %>% select(Density=Total, everything())
+    }
 
     yMax <- NULL
     if(yScaleConsistency=="all"){
         yMax <- max(den$Density)
     }
-    curdir <- getwd()
     for(ms in unique(config$MarkerSet)){
-        idMarkerTag <- "+/-"
-        if(grepl("_with_neg",ms)){
-            idMarkerTag <- "-*"
-        }
         print(paste0("MARKER SET: ",ms))
 
         ## create directories 
-        msOutDir <- file.path(curdir,ms)
+        msOutDir <- file.path(outDir,ms)
         dir.create(msOutDir, showWarnings=TRUE, recursive=TRUE)
         fovOutDir <- file.path(msOutDir,"by_fov")
         dir.create(fovOutDir, showWarnings=TRUE, recursive=TRUE)
@@ -924,14 +1052,11 @@ printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="po
             sumYmax <- NULL
             if(yScaleConsistency == "population"){
                 yMax <- max(ctDen$Density)
-                if(any(ctDen$Density > 0)){
-                    mssum <- suppressMessages(getInfiltrationDensitySummary(densityMarkers, ia=ia, ba=ba))
-                    sumYmax <- max(mssum$TotalDensity)
-                }
             }
             for(s in unique(ctDen$Sample)){
                 print(paste0("    SAMPLE: ",s))
                 sDen <- ctDen %>% filter(Sample == s) %>% filter(complete.cases(.))
+                sDen <- getAllInfiltrationDensityValues(sDen, ia) 
 
                 tryCatch({
                     onefile=TRUE
@@ -940,7 +1065,7 @@ printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="po
                                          paste0(pop,"_",s,"_infiltration_density_by_cell_type_and_FOV.pdf"))
                     pdf(pdfFile, height=11,width=8.5, onefile=onefile)
 
-                    plotTitle <- paste0(s, " Interface FOVs: ",pop,",",idMarkerTag)
+                    plotTitle <- paste0(s, " Interface FOVs: ",pop)#,",",idMarkerTag)
 
                     if(absoluteDensity){
                         print("      plotting absolute infiltration density")
@@ -953,7 +1078,7 @@ printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="po
                         ## plot density percentage
                         if(length(which(sDen$Density > 0)) > 1){
                             print("      plotting intiltration density percentages")
-                            sDenPct <- suppressMessages(getDensityPercentage(sDen))
+                            sDenPct <- sDen %>% select(Sample,SPOT,Band,CellType,Density,Counts,TotalBandDensity,Percent=PercentTotalBandDensity)
                             plotInfiltrationDensity(sDenPct, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
                                                     plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
                                                     printLegend=FALSE, yCol="Percent", facetByFOV=TRUE,
@@ -963,15 +1088,16 @@ printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="po
                     }
                 }, err = function(){
                     warning(paste0("Could not plot sample ",s,", for cell population ",pop))
-                }, finally={ dev.off(); })
+                }, finally={ if(!.Device == "null device"){ dev.off() } })
 
                 if(summarize){
                     tryCatch({
                         ## plot summary over all FOV
-                        sia <- ia %>% filter(Sample == s)
-                        sba <- ba %>% filter(Sample == s)
-                        ssum <- suppressMessages(getInfiltrationDensitySummary(densityMarkers, ia=sia, ba=sba))
-                        if(length(which(!is.na(ssum$TotalDensity))) == 0){
+                        ssum <- sDen %>% group_by(Sample,Band,CellType) %>% summarise(Counts=sum(Counts),BandArea=sum(BandArea)) %>% mutate(Density=Counts/BandArea,TotalBandDensity=sum(Counts/BandArea)) %>% mutate(Percent=Density/TotalBandDensity) 
+                        ssum[is.na(ssum)] <- 0
+                        sumYmax = max(ssum$TotalBandDensity)
+
+                        if(length(which(!is.na(ssum$TotalBandDensity))) == 0){
                             print(paste0("Could not plot summary for sample ",s,", cell population ",pop))
                         } else {
                             onefile=TRUE
@@ -980,14 +1106,13 @@ printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="po
                             pdf(pdfFile, height=8.5, width=11, onefile=onefile)
                             print("      plotting infiltration summary")
                             ## plot summary over all FOV
-                            plotTitle <- paste0(s, " Interface All FOV: ",pop,",",idMarkerTag)
+                            plotTitle <- paste0(s, " Interface All FOV: ",pop)#,",",idMarkerTag)
                             plotInfiltrationDensity(ssum, densityMarkers, bandWidth, ctClrs, plotTitle=plotTitle, yMax=sumYmax,
                                                     separateLegend=TRUE, printLegend=TRUE, facetByFOV=FALSE,
-                                                    facetByCellType=FALSE, yCol="TotalDensity",cellTypeLabels=ctLabels)
+                                                    facetByCellType=FALSE, yCol="Density",cellTypeLabels=ctLabels)
                             if(densityPercentage & length(unique(ssum$CellType)) > 1){
                                 print("      plotting intiltration density percentages")
-                                ssumPct <- suppressMessages(getDensityPercentage(ssum, by=c("Sample","Band")))
-                                plotInfiltrationDensity(ssumPct, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
+                                plotInfiltrationDensity(ssum, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
                                                         plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
                                                         printLegend=FALSE, yCol="Percent", facetByFOV=FALSE,
                                                         facetByCellType=FALSE, yAxisTitle="Percent Total Density",
@@ -996,106 +1121,108 @@ printDensityPlots <- function(den, bandWidth=NULL, config, yScaleConsistency="po
                         }
                     }, err = function(){
                         warning(paste0("Could not plot summary for sample ",s,", cell population ",pop))
-                    },finally={ dev.off(); }) 
+                    },finally={ if(!.Device == "null device"){ dev.off() } }) 
                 }
             }
-        }
+        } #end each population
 
         ### if all negatives are set, making densities mutually exclusive, we can stack
-        if(stacked & idMarkerTag == "-*"){
-            if(length(unique(msCfg$CellType)) == nrow(msCfg)){
+        #if(stacked){# && idMarkerTag == "-*"){
+        #    if(length(unique(msCfg$CellType)) == nrow(msCfg)){
                 ## get stacked version
-                densityMarkers <- unique(msCfg$CellType)
-                tDen <- den %>% filter(CellType %in% densityMarkers)
+        #        densityMarkers <- unique(msCfg$CellType)
+        #        tDen <- den %>% filter(CellType %in% densityMarkers)
    
-                ctLabels <- msCfg$Label
-                names(ctLabels) <- msCfg$CellType
+        #        ctLabels <- msCfg$Label
+        #        names(ctLabels) <- msCfg$CellType
 
-                clrLbls <- unique(msCfg[,c("Color","Label")])
-                ctClrs <- pull(clrLbls[,"Color"])
-                names(ctClrs) <- pull(clrLbls[,"Label"]) 
+        #        clrLbls <- unique(msCfg[,c("Color","Label")])
+        #        ctClrs <- pull(clrLbls[,"Color"])
+        #        names(ctClrs) <- pull(clrLbls[,"Label"]) 
 
                 ## check for unique labels; if they are not unique as-is, revert back to just using cell types;
                 ## TO DO: remove negatives, but only in population, not functional part
-                numLabels <- msCfg %>% select(MarkerSet, Label) %>% group_by(MarkerSet) %>% summarize(nLbls=length(Label)) %>% pull(nLbls)
-                unqLabels <- msCfg %>% select(MarkerSet, Label) %>% group_by(MarkerSet) %>% summarize(nLbls=length(Label)) %>% pull(nLbls)
-                if(unqLabels != numLabels){
-                    ctLabels <- msCfg$CellType
-                    names(ctLabels) <- msCfg$CellType
-                    names(ctClrs) <- ctLabels
-                }
+        #        numLabels <- msCfg %>% select(MarkerSet, Label) %>% group_by(MarkerSet) %>% summarize(nLbls=length(Label)) %>% pull(nLbls)
+        #        unqLabels <- msCfg %>% select(MarkerSet, Label) %>% group_by(MarkerSet) %>% summarize(nLbls=length(Label)) %>% pull(nLbls)
+        #        if(unqLabels != numLabels){
+        #            ctLabels <- msCfg$CellType
+        #            names(ctLabels) <- msCfg$CellType
+        #            names(ctClrs) <- ctLabels
+        #        }
 
-                for(s in unique(tDen$Sample)){
-                    sDen <- tDen %>% filter(Sample == s)
-                    tryCatch({
-                        onefile=TRUE
+        #        for(s in unique(tDen$Sample)){
+        #            sDen <- tDen %>% filter(Sample == s)
+        #            tryCatch({
+        #                onefile=TRUE
                         #if(length(unique(sDen$CellType)) == 1){ onefile <- FALSE }
-                        pdfFile <- file.path(paste0(ms,"_",s,"_infiltration_density_by_cell_type_and_FOV.pdf"))
-                        pdf(pdfFile, height=11, width=8.5, onefile=onefile)
+        #                pdfFile <- file.path(paste0(ms,"_",s,"_infiltration_density_by_cell_type_and_FOV.pdf"))
+        #                pdf(pdfFile, height=11, width=8.5, onefile=onefile)
 
-                        plotTitle <- paste0(s, " Interface FOVs: ",unique(msCfg$MarkerSetAlias)," (Cell ID Markers = ",idMarkerTag,")")
+        #                plotTitle <- paste0(s, " Interface FOVs: ",unique(msCfg$MarkerSetAlias))#," (Cell ID Markers = ",idMarkerTag,")")
 
-                        if(absoluteDensity){
-                            print("      plotting absolute infiltration density (STACKED)")
+        #                if(absoluteDensity){
+        #                    print("      plotting absolute infiltration density (STACKED)")
                             ## print absolute density with legend on separate page
-                            plotInfiltrationDensity(sDen, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
-                                                    plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
-                                                    facetByFOV=TRUE, facetByCellType=FALSE, cellTypeLabels=ctLabels)
-                        }
-                        if(densityPercentage & length(unique(sDen$CellType)) > 1){
-                            ## plot density percentage
-                            if(length(which(sDen$Density > 0)) > 1){
-                                print("      plotting intiltration density percentages (STACKED)")
-                                sDenPct <- suppressMessages(getDensityPercentage(sDen))
-                                plotInfiltrationDensity(sDenPct, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
-                                                        plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
-                                                        printLegend=FALSE, yCol="Percent", facetByFOV=TRUE,
-                                                        facetByCellType=FALSE, yAxisTitle="Percent Total Density",
-                                                        cellTypeLabels=ctLabels, pct=TRUE)
-                            }
-                        }
-                    }, err = function(){
-                        warning(paste0("Could not plot sample ",s,", for cell population ",pop))
-                    }, finally = { dev.off(); }) 
+        #                    plotInfiltrationDensity(sDen, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
+        #                                            plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
+        #                                            facetByFOV=TRUE, facetByCellType=FALSE, cellTypeLabels=ctLabels)
+        #                }
+        #                if(densityPercentage & length(unique(sDen$CellType)) > 1){
+        #                    ## plot density percentage
+        #                    if(length(which(sDen$Density > 0)) > 1){
+        #                        print("      plotting intiltration density percentages (STACKED)")
+        #                        sDenPct <- suppressMessages(getDensityPercentage(sDen))
+        #                        plotInfiltrationDensity(sDenPct, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
+        #                                                plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
+        #                                                printLegend=FALSE, yCol="Percent", facetByFOV=TRUE,
+        #                                                facetByCellType=FALSE, yAxisTitle="Percent Total Density",
+        #                                                cellTypeLabels=ctLabels, pct=TRUE)
+        #                    }
+        #                }
+        #            }, err = function(){
+        #                warning(paste0("Could not plot sample ",s,", for cell population ",pop))
+        #            }, finally = { if(!.Device == "null device"){ dev.off() } }
+        #          )
 
 
-                    if(summarize){
-                        tryCatch({
-                            print("      plotting infiltration summary (STACKED)")
-                            ## plot summary over all FOV
-                            sia <- ia %>% filter(Sample == s)
-                            sba <- ba %>% filter(Sample == s)
-                            ssum <- suppressMessages(getInfiltrationDensitySummary(densityMarkers, ia=sia, ba=sba))
-                            if(length(which(!is.na(ssum$TotalDensity))) == 0){
-                                print(paste0("Could not plot summary for sample ",s,", marker set ",ms))
-                            } else {
-                                onefile=TRUE
-                                if(length(unique(ssum$CellType)) == 1){ onefile <- FALSE }
-                                pdfFile <- file.path(sumOutDir,paste0(ms,"_",s,"_infiltration_density_summary.pdf"))
-                                pdf(pdfFile, height=8.5, width=11, onefile=onefile)
-                                print("      plotting infiltration summary (STACKED)")
-                                ## plot summary over all FOV
-                                plotTitle <- paste0(s, " Interface All FOV: ",unique(msCfg$MarkerSetAlias)," (Cell ID Markers = ",idMarkerTag,")")
-                                plotInfiltrationDensity(ssum, densityMarkers, bandWidth, ctClrs, plotTitle=plotTitle, yMax=yMax,
-                                                        separateLegend=TRUE, printLegend=TRUE, facetByFOV=FALSE,
-                                                        facetByCellType=FALSE, yCol="TotalDensity",cellTypeLabels=ctLabels)
-                                if(length(unique(ssum$CellType)) > 1){
-                                    ssumPct <- suppressMessages(getDensityPercentage(ssum, by=c("Sample","Band")))
-                                    print("      plotting intiltration summary percentages (STACKED)")
-                                    plotInfiltrationDensity(ssumPct, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
-                                                            plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
-                                                            printLegend=FALSE, yCol="Percent", facetByFOV=FALSE,
-                                                            facetByCellType=FALSE, yAxisTitle="Percent Total Density",
-                                                            cellTypeLabels=ctLabels, pct=TRUE)
-                                    }
-                            }
-                        }, err = function(){
-                            warning(paste0("Could not plot summary for sample ",s,", marker set ",ms))
-                        },finally = { dev.off(); }) 
-                    }
-                }
-            }
-        } ## end for each population
+        #            if(summarize){
+        #                tryCatch({
+        #                    print("      plotting infiltration summary (STACKED)")
+        #                    ## plot summary over all FOV
+        #                    sia <- ia %>% filter(Sample == s)
+        #                    sba <- ba %>% filter(Sample == s)
+        #                    ssum <- suppressMessages(getInfiltrationDensitySummary(densityMarkers, ia=sia, ba=sba))
+        #                    if(length(which(!is.na(ssum$TotalDensity))) == 0){
+        #                        print(paste0("Could not plot summary for sample ",s,", marker set ",ms))
+        #                    } else {
+        #                        onefile=TRUE
+        #                        if(length(unique(ssum$CellType)) == 1){ onefile <- FALSE }
+        #                        pdfFile <- file.path(sumOutDir,paste0(ms,"_",s,"_infiltration_density_summary.pdf"))
+        #                        pdf(pdfFile, height=8.5, width=11, onefile=onefile)
+        #                        print("      plotting infiltration summary (STACKED)")
+        #                        ## plot summary over all FOV
+        #                        plotTitle <- paste0(s, " Interface All FOV: ",unique(msCfg$MarkerSetAlias))#," (Cell ID Markers = ",idMarkerTag,")")
+        #                        plotInfiltrationDensity(ssum, densityMarkers, bandWidth, ctClrs, plotTitle=plotTitle, yMax=yMax,
+        #                                                separateLegend=TRUE, printLegend=TRUE, facetByFOV=FALSE,
+        #                                                facetByCellType=FALSE, yCol="TotalDensity",cellTypeLabels=ctLabels)
+        #                        if(length(unique(ssum$CellType)) > 1){
+        #                            ssumPct <- suppressMessages(getDensityPercentage(ssum, by=c("Sample","Band")))
+        #                            print("      plotting intiltration summary percentages (STACKED)")
+        #                            plotInfiltrationDensity(ssumPct, densityMarkers, bandWidth, ctClrs, sampleOrder=sampleOrder,
+        #                                                    plotTitle=plotTitle, yMax=yMax, separateLegend=TRUE,
+        #                                                    printLegend=FALSE, yCol="Percent", facetByFOV=FALSE,
+        #                                                    facetByCellType=FALSE, yAxisTitle="Percent Total Density",
+        #                                                    cellTypeLabels=ctLabels, pct=TRUE)
+        #                            }
+        #                    }
+        #                }, err = function(){
+        #                    warning(paste0("Could not plot summary for sample ",s,", marker set ",ms))
+        #                },finally = { if(!.Device == "null device"){ dev.off() } }
+        #              ) 
+        #            }
+        #        }
+        #    }
+        #} ## end for each population
     } ## end for each marker set
 
 }

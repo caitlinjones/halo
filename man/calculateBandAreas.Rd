@@ -5,7 +5,7 @@
 \title{Calculate area of interface bands, each defined as the collection of points that are located
 between X and Y microns of the tumor boundary [ TO DO: REWORD THIS? ]}
 \usage{
-calculateBandAreas(allBoundaries, maxG = 5, bbData, interfaceBins)
+calculateBandAreas(allBoundaries, maxG = 5, bb, interfaceBins)
 }
 \arguments{
 \item{allBoundaries}{halo boundaries after removal of contained boundaries (list returned by 
@@ -13,7 +13,7 @@ cleanBoundaries())}
 
 \item{maxG}{maximum factor of 10 to use for generating random points on grid [ REWORD??? ]}
 
-\item{bbData}{a list containing X0,X1,Y0,Y1 representing the boundary
+\item{bb}{a list containing X0,X1,Y0,Y1 representing the boundary
 of the trimmed FOV}
 
 \item{interfaceBins}{vector of distances (integers) that define each band; default = (-20:20)*10}

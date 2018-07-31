@@ -6,7 +6,7 @@
 \usage{
 parseAnnotationXML(node, fovName = NULL, outFile = NULL, LineColor = "",
   Name = "", Visible = "", RegionType = "", HasEndcaps = 0,
-  NegativeROA = 0)
+  NegativeROA = 0, boundaryColors = NULL)
 }
 \arguments{
 \item{node}{object of class XMLNode containing Halo annotations for one FOV}

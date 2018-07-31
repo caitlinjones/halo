@@ -4,7 +4,8 @@
 \alias{readHaloAnnotations}
 \title{Parse boundary annotations of a single FOV in a single XML file}
 \usage{
-readHaloAnnotations(annoteFile, annoteType)
+readHaloAnnotations(annoteFile, boundaryColors = NULL,
+  boundaryReassignmentFile = NULL)
 }
 \arguments{
 \item{annoteFile}{XML file containing boundary annotations for a single FOV}

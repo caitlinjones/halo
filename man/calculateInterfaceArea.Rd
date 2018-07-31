@@ -4,8 +4,9 @@
 \alias{calculateInterfaceArea}
 \title{Calculate total area and density of tumor interface}
 \usage{
-calculateInterfaceArea(aFiles, dat, writeCSVfiles = TRUE, maxG = 5,
-  outDir = NULL, statsByBand = FALSE, interfaceBins = (-20:20) * 10)
+calculateInterfaceArea(dat, aFiles = NULL, haloAnnotations = NULL,
+  writeCSVfiles = TRUE, maxG = 5, outDir = NULL,
+  interfaceBins = (-20:20) * 10)
 }
 \arguments{
 \item{aFiles}{a vector of Halo boundary annotation files, with 
@@ -18,13 +19,13 @@ default=TRUE}
 
 \item{outDir}{if writeCSVfiles=T, directory to which these files will be written}
 
-\item{statsByBand}{logical; return stats broken down by interface bands (bins) as opposed to total
-stats; default=FALSE}
-
 \item{interfaceBins}{a vector of distances from tumor interface in which cells will be binned; 
 default=(-20:20)*10}
 
 \item{data}{Halo data for one sample, loaded from *.rda file}
+
+\item{statsByBand}{logical; return stats broken down by interface bands (bins) as opposed to total
+stats; default=FALSE}
 }
 \value{
 a list containing two tables: 'density' and 'area'

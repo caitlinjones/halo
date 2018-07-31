@@ -1,0 +1,53 @@
+The script 
+
+    selene:/home/byrne/halo/dev/halodev/scripts/final_pipeline.pl
+
+1) parses all study meta data
+2) parses and stores all halo boundaries
+3) marks exclusions
+4) generates combination table (I recently made changes to this so I'm not sure how well it works right now)
+5) calculates & plots total areas and densities for each FOV (see notes below about marker & plot config files); also this needs some major cleaning
+6) calculates interface areas 
+7) TO BE ADDED: interface density calculation and plotting
+
+
+The main input to this script is a config file in YAML format. See example: 
+
+
+    selene:/home/byrne/halo/data/template_configs/example_study_config.yaml 
+
+* for post-rethreshold data, modify this file with new input and output files/directories and rerun  
+
+
+
+Pipeline NOTES:
+
+* use /home/byrne/R/R-3.4.3
+
+* can't get halodev to install any more; temporary hack is to load library as-is so that all dependencies are loaded (this also needs to be fixed eventually to load only what is needed when it is needed), and source all scripts in R directory of package
+
+* it is set up so that if a particular output file exists and nothing upstream has changed, that section of the code will not run (similar to our other pipelines)
+
+* for density analyses, a marker config file and a plot config file are required in YAML format. See examples:
+
+    selene:/home/byrne/halo/data/template_configs/template_marker_config.yaml
+    selene:/home/byrne/halo/data/template_configs/template_plot_config.yaml
+
+* if changing config for different analyses, make sure to change output directories in study config file so that files are not overwritten
+
+* counts SHOULD now match Nick's counts tables
+
+* plotting that is currently in the pipeline is not quite finished and can just be ignored for now
+
+
+
+OTHER NOTES:
+
+* To ONLY add Cell_Type and Subtype to Nick's counts tables, use script 
+
+    /home/byrne/halo/dev/halodev/scripts/add_marker_combo_interpretations.R (run with -h to see usage)
+
+
+
+
+

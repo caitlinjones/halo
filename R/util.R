@@ -360,7 +360,7 @@ getMarkerConfig <- function(configFile, plotConfigFile){
         ## for markers that are part of the entire set but not part of
         ## each individual marker combo 
         if("functional" %in% msConfig){
-            if(!"functional_negatives" %in% msConfig | ms$functional_negatives){ 
+            if(!("functional_negatives" %in% msConfig) || ms$functional_negatives){ 
                 if(length(ms$functional) == 1){
                     functional <- c(ms$functional, paste0(ms$functional,"-"))
                 } else {
@@ -374,7 +374,7 @@ getMarkerConfig <- function(configFile, plotConfigFile){
             } else {
                 functional <- ms$functional
             }
-            if("keep_population_markers" %in% msConfig & ms$keep_population_markers){
+            if("keep_population_markers" %in% msConfig && ms$keep_population_markers){
                 functional <- c(functional,ms$populations)
             }
         }
@@ -400,6 +400,7 @@ getMarkerConfig <- function(configFile, plotConfigFile){
             }
             for(x in seq(pm)){
                 p <- pm[x]
+                clr <- "gray"
                 if(length(functional) > 0){
                     for(f in functional){
                         if(!f %in% ms$populations){

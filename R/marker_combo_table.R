@@ -6,10 +6,10 @@
 #' combination in that row
 #' 
 #' @param dataFiles   vector of *.rda files containing Halo data
-#' @param markers     vector of markers to be counted
+#' @param markers     vector of individual markers to be counted
 #' @param outFile     name of *.xlsx file to write final tables; default=NULL
 #' @return list of tables, one for all samples and one for each sample
-markerComboCounts <- function(markers, dataFiles=NULL, dat=NULL, outFile=NULL){
+markerComboCounts <- function(markers, dataFiles=NULL, dat=NULL, outFile=NULL, oneSheet=TRUE){
 
     allSamps <- tibble()
 
@@ -62,10 +62,38 @@ markerComboCounts <- function(markers, dataFiles=NULL, dat=NULL, outFile=NULL){
         cTbl[,4:ncol(cTbl)][cTbl[,4:ncol(cTbl)] == 0] <- ""
         cTbl[,4:ncol(cTbl)][cTbl[,4:ncol(cTbl)] == 1] <- "X"
  
-        allTbls[[s]] <- cTbl
-        if(!is.null(outFile)){
+        allTbls[[s]] <- ungroup(cTbl)
+        if("DAPI" %in% names(allTbls[[s]])){
+            allTbls[[s]] <- allTbls[[s]] %>% select(-(DAPI))
+        }
+        if(!is.null(outFile) && !oneSheet){
             write.xlsx(as.data.frame(cTbl), outFile, sheet=s, append=append, row.names=FALSE)
         }
+    }
+    if(oneSheet){
+        tmp <- allTbls[["AllSamples"]]
+        combos <- apply(tmp,1,function(x){ return(paste(sort(names(tmp)[which(x=="X")]),collapse=",")) })
+
+        tbl <- tibble(Markers=combos,
+                      Cell_Type="",
+                      Cell_Subtype="",
+                      Total=tmp$Count)
+        for(s in samps){
+            tmp <- allTbls[[s]]
+            combos <- apply(tmp,1,function(x){ return(paste(sort(names(tmp)[which(x=="X")]),collapse=",")) })
+            tmp$Markers <- combos
+            tmp <- tmp %>% ungroup() %>% select(Markers,Count)
+            names(tmp)[ncol(tmp)] <- s
+            tbl <- left_join(tbl, tmp, by=c("Markers"))
+        }
+        tbl[is.na(tbl)] <- 0
+        dapiRow <- as.tibble(c(list(Markers="DAPI",Cell_Type="",Cell_Subtype="",Total=sum(tbl$Total)),colSums(tbl[,5:ncol(tbl)])))
+        tbl <- bind_rows(tbl, dapiRow) %>% arrange(-Total) 
+ 
+        if(!is.null(outFile)){
+            write.xlsx(as.data.frame(tbl), outFile, sheet="AllCounts", append=FALSE, row.names=FALSE)
+        }
+        return(list("AllCounts"=tbl))
     }
 
     return(allTbls)
@@ -92,11 +120,14 @@ interpretMarkerCombos <- function(markerComboCts, allCellTypes, outFile=NULL){
 
     ctCounts <- list()
     cellTypeList <- c()
+    cellSubtypeList <- c()
     cellTypeNums <- c()
     comboStrings <- c()
     for(rowNum in 1:nrow(markerComboCts)){
         row <- markerComboCts[rowNum,]
-        ct <- assignCellType(row, cellTypes, conditionalTypes)
+        ctSubCt <- assignCellType(row, cellTypes, conditionalTypes)
+        ct <- ctSubCt$cellType
+        subct <- ctSubCt$subtype
         if(!ct %in% names(ctCounts)){ 
             ctCounts[[ct]] <- 0
         }
@@ -110,12 +141,14 @@ interpretMarkerCombos <- function(markerComboCts, allCellTypes, outFile=NULL){
             comboStr <- paste(markers, collapse = "/")
         }
         cellTypeList <- c(cellTypeList,ct)
+        cellSubtypeList <- c(cellSubtypeList, subct)
         cellTypeNums <- c(cellTypeNums, ifelse(ct == "NEGATIVE","",paste0("#",ctCounts[[ct]])))
         comboStrings <- c(comboStrings, comboStr)
     }
     
     ## add a separate column for each piece, to be pasted together later
     markerComboCts$cellType <- cellTypeList
+    markerComboCts$subtype <- cellSubtypeList
     markerComboCts$cellTypeNum <- cellTypeNums
     markerComboCts$comboString <- comboStrings
     

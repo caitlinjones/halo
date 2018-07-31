@@ -33,13 +33,12 @@ args <- parser$parse_args()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-updatedBoundaries <- FALSE
 updatedExclusions <- FALSE
 updatedComboTable <- FALSE
 updatedFOVarea <- FALSE
 updatedFOVdensity <- FALSE
 updatedInfiltrationArea <- FALSE
-updatedInfiltrationDensity <- FALSE
+updatedInfiltrationDensity <- TRUE
 
 ################################################
 ####           INITIALIZE PROJECT           ####
@@ -47,8 +46,7 @@ updatedInfiltrationDensity <- FALSE
 pp <- NULL
 print(args$manifest)
 if(!is.null(args$manifest)){
-    #pp <- initializeProject(args$manifest,type="counts")
-    pp <- read_yaml(args$manifest)
+    pp <- initializeProject(args$manifest,type="counts")
     print(pp)
 } else {
     usage()
@@ -56,7 +54,9 @@ if(!is.null(args$manifest)){
 
 #pp <- validateConfig(pp)
 
-######### GET ALL ANNOTATIONS #########
+################################################
+#########      GET ALL ANNOTATIONS     #########
+################################################
 if(!is.null(pp$marker_config_file)){
     mCfg <- tryCatch({
              read_yaml(pp$marker_config_file)
@@ -95,57 +95,31 @@ if(length(fovAnnFile) == 0){
 }
 fovAnnotations <- as.tibble(read.xlsx(fovAnnFile,1))
 
+
 ## read halo boundary annotations
 allHaloAnnotations <- NULL
 if(!is.null(pp$annotations_file)){
-    if(grepl(".txt$",pp$annotations_file)){
-        print(paste0("Loading halo boundary annotations from TXT file: ",pp$annotations_file))
-        haloAnnotationsTxt <- read.delim(pp$annotations_file,header=T,sep="\t")
-        haloAnnotationsTxt <- split(haloAnnotationsTxt, haloAnnotationsTxt$Sample)
-        for(s in names(haloAnnotationsTxt)){
-            fovAnn <- split(haloAnnotationsTxt[[s]], haloAnnotationsTxt[[s]]$FOV)
-            for(fov in unique(haloAnnotationsTxt)){
-                btAnn <- split(fovAnn[[fov]], fovAnn[[fov]]$RegionCode)
-                allHaloAnnotations[[s]][[fov]] <- btAnn
-            }
-        }
-    } else if(grepl(".rda$",pp$annotations_file)){
-        print(paste0("Loading halo boundary annotations from RDA file: ",pp$annotations_file))
-        allHaloAnnotations <- readRDS(pp$annotations_file)
-    } else {
-        stop(paste0("Annotations file has unrecognized format: ",pp$annotations_file))
-    }
+    allHaloAnnotations <- readRDS(pp$annotations_file)
 } else if(!is.null(pp$annotations_dirs)){
-    if(basename(pp$annotations_dirs) == "HaloCoordinates"){
-        pp$annotations_dirs = dir(pp$annotations_dirs)
+    if(length(pp$annotations_dirs) == 1 && basename(pp$annotations_dirs) == "HaloCoordinates"){
+        pp$annotations_dirs = file.path(pp$annotations_dirs, dir(pp$annotations_dirs))
     }
     print("Getting all HALO boundary annotations")
-    allHaloAnnTXT <- NULL
-    #for(s in sampAnn$Sample_name){
-    for(s in sampAnn$CELL_DIVE_ID){
+    for(s in sampAnn$Sample_name){
         sampHaloAnn <- getAllHaloAnnotations(s, pp$annotations_dirs, boundaryColors=pp$boundary_colors)
         allHaloAnnotations[[s]] <- sampHaloAnn
     }
-    for(s in names(allHaloAnnotations)){
-        for(fov in names(sampHaloAnn)){ 
-            for(bt in names(sampHaloAnn[[fov]])){ 
-                ann <- sampHaloAnn[[s]][[fov]][[bt]]
-                ann$Sample <- s
-                ann$FOV <- fov
-                allHaloAnnTXT <- allHaloAnnTXT %>% bind_rows(ann)
-            } 
-        }
-    }
-    write.table(allHaloAnnTXT, file="haloAnnotations.txt", col.names=T, row.names=T, quote=F, sep="\t")
-    updatedBoundaries <- TRUE
-} else {
-    print("No boundary annotations found. Can not run exclusions OR infiltration analysis.")
+    saveRDS(allHaloAnnotations, file="allHaloAnnotations.rda")
 }
+if(is.null(allHaloAnnotations)){
+    stop("No boundary annotations found. Can not run exclusions OR infiltration analysis.")
+}
+
 
 ################################################
 ####             MARK EXCLUSIONS            ####
 ################################################               
-if(args$markExclusions || updatedBoundaries){
+if(args$markExclusions){
     ## check for data
     if(!is.null(pp$raw_data_files)){
         dataFiles <- pp$raw_data_files
@@ -187,12 +161,12 @@ if(args$markExclusions || updatedBoundaries){
 
         print(paste0("Reading file ",df))
         dat <- readRDS(df)
-        #dat$Sample <- gsub("_.*","",dat$Sample) #### FIGURE OUT A BETTER WAY
+        dat$Sample <- gsub("_.*","",dat$Sample) #### FIGURE OUT A BETTER WAY
 
         ## to map FOV annotations to samples
         samp <- unique(dat$Sample)
-        #cellDiveId <- sampAnn %>% filter(Sample_name == samp) %>% pull(CELL_DIVE_ID) %>% as.character()
-        cellDiveId <- samp   #### RIGHT NOW THIS IS INCONSISTENT BETWEEN COHORTS
+        cellDiveId <- sampAnn %>% filter(Sample_name == samp) %>% pull(CELL_DIVE_ID) %>% as.character()
+        #cellDiveId <- samp   #### RIGHT NOW THIS IS INCONSISTENT BETWEEN COHORTS
 
         drift <- NULL
         ## figure out which drift file to use
@@ -228,7 +202,6 @@ if(args$markExclusions || updatedBoundaries){
 ################################################
 dataFiles <- NULL
 allDat <- NULL
-print("Loading all pre-processed halo data...")
 if(is.null(pp$data_files)){
     if(is.null(pp$data_dir)){
         stop("No data files provided. Please modify config file and rerun.")
@@ -239,7 +212,6 @@ if(is.null(pp$data_files)){
 }
 
 for(df in dataFiles){
-    print(paste0("Reading file ",df))
     dat <- readRDS(df)
     dat <- dat %>% 
            filter(EXCLUDE=="", ValueType=="Positive") %>%
@@ -253,16 +225,14 @@ for(df in dataFiles){
 ################################################
 allTbls <- NULL
 if(!is.null(pp$raw_marker_combo_table_file) && !updatedExclusions){
-    print(paste0("Loading marker combo table from file: ",pp$raw_marker_combo_table_file))
     wb <- loadWorkbook(pp$raw_marker_combo_table_file)
     sheets <- getSheets(wb)
     for(sheet in names(sheets)){
         allTbls[[sheet]] <- as.tibble(as.data.frame(sheets[[sheet]]))
     }
 } else {
-
     if(is.null(mCfg)){
-        #### error?
+        stop("Marker configuration is NULL. Can not generate marker table.")
     }
     indivMarkers <- unique(mCfg$all_cell_type_markers)
     allCountTbls <- markerComboCounts(dat=allDat, indivMarkers)
@@ -309,6 +279,7 @@ write(as.yaml(pp, indent=4, indent.mapping.sequence=TRUE), file=args$manifest)
 ################################################
 ####         CALCULATE TOTAL FOV AREA       ####  
 ################################################
+
 if(is.null(pp$fov_area_file) || !file.exists(pp$fov_area_file) || updatedExclusions){
     if(is.null(allHaloAnnotations) && is.null(pp$annotations_dirs)){
         flatMeta <- flattenMetaData(metaDir=pp$meta_dir, metaFiles=pp$meta_files)
@@ -320,7 +291,7 @@ if(is.null(pp$fov_area_file) || !file.exists(pp$fov_area_file) || updatedExclusi
     }
     ## TO DO: ADD THESE CHECKS TO VALIDATION FUNCTION
     if(!"write_csv_files" %in% names(pp) || is.null(pp$write_csv_files)){ pp$write_csv_files = TRUE }
-    if(!"max_g" %in% names(pp) || is.null(pp$max_g)){ pp$max_g = 5 }
+    if(!"max_g" %in% names(pp) || is.null(pp$max_g)){ pp$max_g = 5 } 
     #if(is.null(mCfg)){ # error }
 
     fovAreas <- calculateAreaTotalFOV(allDat, metaFiles, pp$fov_area_dir, haloAnnotations=allHaloAnnotations,
@@ -334,7 +305,7 @@ if(is.null(pp$fov_area_file) || !file.exists(pp$fov_area_file) || updatedExclusi
 }
 
 if(is.null(pp$fov_density_file) || !file.exists(pp$fov_density_file) || updatedFOVarea){
-    fovDensity <- calculateMarkerDensityTotalFOV(allDat, fovAreas, mCfg$cell_type_marker_combinations,
+    fovDensity <- calculateMarkerDensityTotalFOV(allDat, fovAreas, mCfg$cell_type_marker_combinations, 
                                                  writeCSVfiles=pp$write_csv_files, densityDir=pp$fov_density_dir)
     if(pp$write_csv_files){
         pp$fov_density_file <- file.path(pp$fov_density_dir,"All_samples_density.csv")
@@ -345,7 +316,6 @@ if(is.null(pp$fov_density_file) || !file.exists(pp$fov_density_file) || updatedF
 }
 
 write(as.yaml(pp, indent=4, indent.mapping.sequence=TRUE), file=args$manifest)
-
 
 # 4) infiltration area/density
 #if(is.null(pp$infiltration_area_file) || !file.exists(pp$infiltration_area_file || updatedExclusions){

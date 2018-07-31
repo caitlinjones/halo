@@ -5,11 +5,11 @@
 \title{Get a table of marker combination densities}
 \usage{
 getMarkerDensityTable(markers, dat = NULL, outDir = getwd(),
-  dataFiles = NULL, annotationsDirs = NULL, areaFiles = NULL,
-  densityFiles = NULL, sampleOrder = NULL, writeCSVfiles = FALSE,
-  pad = 30, byBand = TRUE, maxDistanceFromInterface = 200,
-  bandWidth = 10, markerSetName = NULL, sortByMarker = NULL,
-  funcMarker = NULL, maxG = 5, calcFOVarea = FALSE)
+  dataFiles = NULL, annotationsDirs = NULL, haloAnnotations = NULL,
+  areaFiles = NULL, densityFiles = NULL, sampleOrder = NULL,
+  writeCSVfiles = FALSE, pad = 20, byBand = TRUE,
+  maxDistanceFromInterface = 360, bandWidth = 10, markerSetName = NULL,
+  sortByMarker = NULL, funcMarker = NULL, maxG = 5, calcFOVarea = FALSE)
 }
 \arguments{
 \item{dat}{tibble containing halo data, specifically Sample, UUID, SPOT, Marker,

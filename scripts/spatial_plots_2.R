@@ -93,7 +93,7 @@ if(args$plotDensityByBand){
         stop("Can not plot infiltration density. Plot config required.")
     }
     ## get marker config
-    markerCfg <- halodev::getMarkerConfig(pp$marker_config_file,pp$plot_config_file)
+    markerCfg <- getMarkerConfig(pp$marker_config_file,pp$plot_config_file)
     markers <- unique(markerCfg$CellType)
 
     ## get density

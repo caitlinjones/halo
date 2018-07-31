@@ -198,6 +198,12 @@ trimDFToBB<-function(df,bb) {
 
 subDivideLongSegments<-function(boundary,maxSegLength) {
 
+print(boundary)
+
+    if(nrow(boundary) == 0){
+        return()
+    }
+
     bline=boundary %>% dplyr::select(X,Y) %>% mutate(SegNo=seq(nrow(.)))
     newPts=list()
     for(is in seq(nrow(bline)-1)) {
