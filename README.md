@@ -52,6 +52,12 @@ Run from scratch, including marking exclusions
 Rscript scripts/final_pipeline.R -m config/study_config.yaml --markExclusions
 ```
 
+### Step 4: Rerun failed or additional pipeline steps
+To rerun a step because of failure or dependency changes, manually modify __study_config.yaml__ by removing files to be recreated. Alternatively, if file does exist, delete it. Then rerun pipeline.
+```{r eval=FALSE}
+Rscript scripts/final_pipeline.R -m config/study_config.yaml
+```
+
 ### NOTES: 
 * Currently the pipeline runs the following steps:
    - parse and store all halo boundaries
