@@ -72,7 +72,7 @@ Rscript scripts/final_pipeline.R -m config/study_config.yaml
 
 * Similarly, if starting pipeline using \*.rda files that already have EXCLUDE columns, fill in __data_dir__ or __data_files__ in __study_config.yaml__ and do NOT use __--markExclusions__.
 
-* __study_config.yaml__ will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies already exist and remain unchanged during current run.
+* __study_config.yaml__ will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies already exist and remain unchanged during current run. To turn this default behavior off, use __--noConfigOverwrite__.
  
 
  
