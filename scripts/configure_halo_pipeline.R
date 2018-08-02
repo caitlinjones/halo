@@ -29,12 +29,16 @@ parser$add_argument("-df", "--dataFiles", type="character", default=NULL,
                     help="comma-separated (no spaces) list of *.rda files")
 
 parser$add_argument("-dd", "--dataDir", type="character", default=NULL,
-                    help="directory containing *.rda files to be analyzed; NOTE: if dataFiles are given as well, value passed here will be ignored.")     
+                    help="directory containing *.rda files to be analyzed; NOTE: if dataFiles are given as well, value passed here will be ignored.")    
+ 
 parser$add_argument("-mf", "--metaFiles", type="character", default=NULL,
                     help="comma-separated (no spaces) list of meta data files in *.xlsx format; see documentation for formats") 
 
 parser$add_argument("-md", "--metaDir", type="character", default=NULL,
                     help="directory containing all *.xlsx meta data files in formats described in documentation; NOTE: if metaFiles is also given, value passed here will be ignored")
+
+parser$add_argument("--driftDir", type="character", default=NULL,
+                    help="directory containing drift summaries for each sample")
 
 parser$add_argument("-p", "--pad", type="double", default=20, 
                     help="number in pixels to trim from each FOV")
@@ -68,35 +72,38 @@ parser$add_argument("--infiltrationDir", type="character", default=NULL,
 parser$add_argument("--infiltrationDensityDir", type="character", default=NULL,
                     help="all infiltration density data and plots will go here, default is infiltrationDir/density")
 
-parser$add_argument("--infiltrationDensityFiles", type="character", default=NULL,
-                    help="comma-separated list of CSV files containing pre-computed infiltration density data") 
+parser$add_argument("--infiltrationDensityFile", type="character", default=NULL,
+                    help="comma separated list of CSV files containing precomputed infiltration density data") 
 
 parser$add_argument("--infiltrationAreaDir", type="character", default=NULL,
                     help="all infiltration area data will go here, default is infiltrationDir/area")
 
-parser$add_argument("--infiltrationAreaFiles", type="character", default=NULL,
-                    help="comma-separated list of CSV files containing pre-computed infiltration area data")
+parser$add_argument("--infiltrationAreaFile", type="character", default=NULL,
+                    help="comma separated list of CSV files containing pre computed infiltration area data")
 
 parser$add_argument("--fovStatsDir", type="character", default=NULL,
-                    help="all FOV-based analyses will go here, default is rootDir/studyName/fov_data")
+                    help="all FOV based analyses will go here, default is rootDir/studyName/fov_data")
 
 parser$add_argument("--fovDensityDir", type="character", default=NULL,
                     help="all FOV density data and plots will go here, default is fovStatsDir/density")
 
-parser$add_argument("--fovDensityFiles", type="character", default=NULL,
-                    help="comma-separated list of CSV files containing pre-computed FOV density data")
+parser$add_argument("--fovDensityFile", type="character", default=NULL,
+                    help="comma separated list of CSV files containing pre computed FOV density data")
 
 parser$add_argument("--fovAreaDir", type="character", default=NULL,
                     help="all FOV area data will go here, default is fovStatsDir/area")
 
-parser$add_argument("--fovAreaFiles", type="character", default=NULL,
-                    help="comma-separated list of CSV files containing pre-computed FOV area data")
+parser$add_argument("--fovAreaFile", type="character", default=NULL,
+                    help="comma separated list of CSV files containing pre computed FOV area data")
 
 parser$add_argument("--markerConfigFile", type="character", default=NULL,
                     help="YAML file containing marker configuration (see documentation for details)")
 
 parser$add_argument("--plotConfigFile", type="character", default=NULL,
                     help="YAML file containing plot configuration (see documentation for details)")
+
+parser$add_argument("--cellTypeConfigFile", type="character", default=NULL,
+                    help="YAML file containing configuration of cell type markers & combinations (see documentation for details)")
 
 parser$add_argument("--annotationsDirs", type="character", default=NULL,
                     help="directory where HALO XML annotations (coordinates) files live")
@@ -124,8 +131,8 @@ print(args)
 
 library(halodev)
 #source("/home/byrne/halo/dev/halodev/R/marker_combo_table.R")
-source("/home/byrne/halo/dev/halodev/R/util.R")
-source("/home/byrne/halo/dev/halodev/R/process_meta.R")
+#source("/home/byrne/halo/dev/halodev/R/util.R")
+#source("/home/byrne/halo/dev/halodev/R/process_meta.R")
 
 configureStudy(studyName = args$studyName,
                studyDir  = args$rootDir,
@@ -145,14 +152,15 @@ configureStudy(studyName = args$studyName,
                infiltration_dir = args$infiltrationDir,
                infiltration_density_dir = args$infiltrationDensityDir,
                infiltration_area_dir = args$infiltrationAreaDir,
-               infiltration_density_files = args$infiltrationDensityFiles,
-               infiltration_area_files = args$infiltrationAreaFiles,
+               infiltration_density_file = args$infiltrationDensityFile,
+               infiltration_area_file = args$infiltrationAreaFile,
                fov_stats_dir = args$fovStatsDir,
                fov_density_dir = args$fovDensityDir,
                fov_area_dir = args$fovAreaDir,
-               fov_density_files = args$fovDensityFiles,
-               fov_area_files = args$fovAreaFiles,
+               fov_density_file = args$fovDensityFile,
+               fov_area_file = args$fovAreaFile,
                marker_config_file = args$markerConfigFile,
+               celltype_config_file = args$cellTypeConfigFile,
                plot_config_file = args$plotConfigFile,
                log = args$log,
                drift_threshold = args$driftThreshold,

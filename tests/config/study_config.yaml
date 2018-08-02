@@ -1,0 +1,66 @@
+data_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData
+meta_files: ~
+drift_files: ~
+out_dir: ~
+log: cohort2.log
+debug: yes
+pad: 20.0
+drift_threshold: 0.1
+max_distance_from_interface: 360
+drift_dir: /ifs/tcga/socci/Multiomyx/Cell_drift_loss_masks/melanoma_drift_result/drift_summary
+study_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2
+debug_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/debug
+infiltration_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration
+infiltration_density_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/density
+infiltration_area_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/area
+fov_stats_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data
+fov_density_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density
+fov_area_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area
+by_band: yes
+band_width: 10
+config_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/config
+studyName: Cohort2
+studyDir: /home/byrne/halo/data/Melanoma_IL2__Final
+raw_data_dir: /home/socci/Work/Users/MellingI/Halo/Melanoma_IL2__Final/Cohort2/data/Melanoma_IL2__Final_C2_v1
+meta_dir: /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/MetaData
+annotations_file: allHaloAnnotations.rda
+annotations_dirs: /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates
+write_csv_files: yes
+plot_config_file: /home/byrne/halo/data/template_configs/plot_config.yaml
+celltype_config_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/config/template_marker_config.yaml
+marker_analysis_config_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/config/all_marker_sets_config.yaml
+max_g: 5.0
+fov_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area/All_samples_area.csv
+fov_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density/All_samples_density.csv
+post_rethreshold_marker_combo_table_file: ~
+post_rethreshold_fov_area_file: ~
+raw_marker_combo_table_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/raw_marker_combo_table_20180707.xlsx
+pre_rethreshold_fov_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area/pre_rethreshold_All_samples_area.csv
+pre_rethreshold_fov_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density/pre_rethreshold_All_samples_density.csv
+post_rethreshold_fov_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density/post_rethreshold_All_samples_density.csv
+data_files:
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_1_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_10_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_11_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_12_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_13_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_14_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_15_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_16_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_17_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_18_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_19_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_2_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_20_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_21_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_3_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_4_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_5_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_6_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_7_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_8_MegaTableV5b_Excl.rda
+    - /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData/mel_9_MegaTableV5b_Excl.rda
+interface_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/area/all_samples_interface_area.csv
+interface_band_assignments_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/area/all_samples_band_assignments.csv
+infiltration_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/density/All_samples_density.csv
+

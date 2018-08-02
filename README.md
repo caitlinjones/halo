@@ -15,35 +15,56 @@ install_github("caitlinjones/halo")
 ```
 ### Step 2: Create manifest with all project parameters including input files
 Example [here](example/manifest.txt) 
-NOTE: Manifests will soon be built automatically using meta data files, but for now,
-use template manifests in example/ folder for each step below and modify manually
-as needed
 
-### Step 3 (if applicable): Run ONLY ONE TIME - Mark exclusions
-Given raw object analysis \*.rda files and exclusion files (including Halo XML, drift summaries
-and FOV annotations), add an EXCLUDE column to data indicating which cells should not be analyzed. 
-If data has already been marked, skip to Step 4.
+Run
 ```{r eval=FALSE}
-Rscript scripts/mark_exclusions.R -m example/counts/exclusion_manifest.txt
+cd [WORKING_DIRECTORY]
+Rscript scripts/configure_halo_pipeline.R \
+     --rawDataDir /home/byrne/halo/dev/halodev/tests/data \
+     --studyName halodevTest \
+     --dataDir $PWD/objectAnalysisData \
+     --metaDir /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/MetaData \
+     --driftDir /ifs/tcga/socci/Multiomyx/Cell_drift_loss_masks/melanoma_drift_result/drift_summary \
+     --markerConfigFile /home/byrne/halo/data/template_configs/template_marker_config.yaml \
+     --cellTypeConfigFile /home/byrne/halo/data/template_configs/template_marker_config.yaml \
+     --plotConfigFile /home/byrne/halo/data/template_configs/plot_config.yaml \
+     --annotationsDirs /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates \
+     --setDefaultDirectoryStructure
 ```
 
-### Step 3: Run one or more pre-written scripts 
-
-#### * Generate counts of given markers
-WARNING: This script has not been tested recently
+Above are the minimum required arguments to start a new pipeline run FROM SCRATCH. For a full list of options, run
 ```{r eval=FALSE}
-Rscript scripts/counts.R -m example/counts/counts_manifest.txt
+Rscript scripts/configure_halo_pipeline.R -h
 ```
 
-#### * Spatial Plots
-Plot both total density and density by band
+Use '--setDefaultDirectoryStructure' to do just that. This will create default folders and subfolders for all possible analyses. 
+
+The result of this script is a YAML file with all parameters needed to run entire pipeline. Default location for this file is studyName/config/study_config.yaml. This file can then be manually edited as needed or used as a template for future pipeline runs.
+
+### Step 3: Run pipeline
+Move to study directory, e.g., 
 ```{r eval=FALSE}
-Rscript scripts/spatial_plots_2.R -m example/spatial_plots/density_manifest.txt --plotDensity --plotDensityByBand
+cd {studyName}
+```
+
+Run from scratch, including marking exclusions
+```{r eval=FALSE}
+Rscript scripts/final_pipeline.R -m config/study_config.yaml --markExclusions
 ```
 
 NOTES: 
-* Plotting total density has not been tested since modifying and adding code for plotting 
-density by band
-* Other scripts in scripts/ folder also have not been tested recently
-* Manifests are a bit painful to create right now - they will soon be built automatically
-  using meta data files and can be modified manually as needed
+* Currently the pipeline runs the following steps:
+   - parse and store all halo boundaries
+   - mark exclusions & generate debug plots
+   - generate cell type marker combination counts spreadsheet with cell type interpretations
+   - calculate total FOV area and marker densities
+   - plot total FOV marker densities
+   - calculate infiltration area and marker densities (by distance intervals from tumor interfaces)
+   - plot infiltration marker densities
+
+* Exclusions need to be marked only once. Once run, study_config.yaml will be updated to include data_dir, which will point to the directory containing \*.rda files that include exclusions. For any subsequent pipeline runs, do NOT include markExclusions unless meta data, drift data or Halo boundary data has changed. 
+
+* study_config.yaml will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies are unchanged.
+ 
+
+ 

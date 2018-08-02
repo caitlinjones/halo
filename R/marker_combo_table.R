@@ -283,3 +283,74 @@ markerComboXLSX <- function(dataFiles, markerFile, cellTypesFile, unreasonableCo
 
     return(allCountTbls)
 }
+options(stringsAsFactors=FALSE)
+
+#' Shortcut to write a XLSX file 
+#' 
+#' Write a XLSX file with the following defaults:
+#'    row.names = F
+#'    append = TRUE
+#'    sheetName = NULL
+#'
+#' @param dat        data to be written, either tibble, matrix or dataframe
+#' @param outFile    name of output file
+#' @param sheetName  name of Excel Worksheet
+#' @param append     logical indicating whether to append to the file or
+#'                   overwrite; Default=TRUE
+writeXLSXsheet <- function(dat, outFile, sheetName=NULL, append=TRUE){
+    write.xlsx(as.data.frame(dat), outFile, row.names=F, sheetName = sheetName, append = append)
+}
+
+#' Clean marker file
+#' 
+#' Remove spaces, new lines, tabs from file
+#' 
+#' @param markerFile   File condatining list of marker names
+#' @param altBases     a vector of alternate markers that will be considered the baseline
+#'                     for all other counts
+#' @return  a vector of markers
+cleanMarkers <- function(markerFile,altBases=NULL){
+    markers <- scan(markerFile, "", sep="\n")
+    markers <- gsub("[[:space:]]", "", markers)
+    if(!is.null(altBases) & length(altBases) > 0){
+        for(ab in altBases){
+            if(ab != "DAPI"){
+                m <- paste0(ab,",DAPI")
+                if(! m %in% markers){ 
+                    markers <- c(markers,m)
+                }
+            }
+        }
+    }
+    return(markers)
+}
+
+#' Create median row
+#' 
+#' Given a tibble with the first three columns Sample, FOV, SLICE, 
+#' caclulate medians of all remaining columns and return row to be added to tibble
+#' 
+#' @param  dat    table of counts where first three columns are Sample, 
+#'                  FOV, SLICE, and the remaining columns are marker counts or fractions
+#' @param  samp   sample name
+#' @return   a row where Sample is the unique sample in input table, FOV and SLICE are NA,
+#'           and the remaining values are medians of each column
+medianRow <- function(dat,samp){
+    meds <- as.list(apply(dat[,4:ncol(dat)],2,median))
+    medRow <- list(Sample=samp, FOV=NA, SLICE=NA)   
+    medRow <- c(medRow, meds)
+    return(as.tibble(medRow))
+}
+
+computeMultiMarkerTable<-function(mt,markerCols) {
+    for(ii in which(grepl(",",markerCols))) {
+        markers=strsplit(markerCols[ii],",")[[1]]
+        mt[[markerCols[ii]]] = mt %>%
+            dplyr::select(one_of(markers)) %>%
+            mutate(XX=ifelse(rowSums(.)==len(markers),1,0)) %$%
+            as.vector(XX)
+    }
+
+    ## Remove any DAPI negative cells
+    mt %<>% filter(DAPI==1)
+}

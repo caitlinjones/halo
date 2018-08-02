@@ -399,32 +399,40 @@ getTemplatePlotConfig <- function(markerConfig, writeYAML=TRUE, outDir=getwd()){
 #' @param setDefaultDirectoryStruct 
 getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectoryStruct=TRUE, studyName=NULL, writeYAML=TRUE){
      ## set defaults
-    sCfg <- list(raw_data_dir               = NULL,
-                 raw_data_files             = NULL,
-                 data_dir                   = NULL,
-                 data_files                 = NULL,
-                 meta_dir                   = NULL,
-                 meta_files                 = NULL,
-                 drift_dir                  = NULL,
-                 drift_files                = NULL,
-                 study_dir                  = NULL, 
-                 log                        = NULL,
-                 marker_config_file         = NULL,
-                 plot_config_file           = NULL,
-                 pad                        = 20,
-                 drift_threshold            = 0.1,
-                 debug                      = TRUE,
-                 debug_dir                  = NULL,
-                 infiltration_dir           = NULL,
-                 infiltration_density_dir   = NULL,
-                 infiltration_density_files = NULL,
-                 infiltration_area_dir      = NULL,
-                 infiltration_area_files    = NULL,
-                 fov_stats_dir              = NULL,
-                 fov_density_dir            = NULL,
-                 fov_density_files          = NULL,
-                 fov_area_dir               = NULL,
-                 fov_area_files             = NULL)
+    sCfg <- list(raw_data_dir                = NULL,
+                 raw_data_files              = NULL,
+                 data_dir                    = NULL,
+                 data_files                  = NULL,
+                 meta_dir                    = NULL,
+                 meta_files                  = NULL,
+                 drift_dir                   = NULL,
+                 drift_files                 = NULL,
+                 study_dir                   = NULL, 
+                 log                         = NULL,
+                 marker_config_file          = NULL,
+                 plot_config_file            = NULL,
+                 raw_marker_combo_table_file = NULL,
+                 celltype_config_file        = NULL,
+                 marker_analysis_config_file = NULL,
+                 pad                         = 20,
+                 drift_threshold             = 0.1,
+                 max_g                       = 5,
+                 band_width                  = 10,
+                 by_band                     = TRUE,
+                 max_distance_from_interface = 360,
+                 debug                       = TRUE,
+                 debug_dir                   = NULL,
+                 infiltration_dir            = NULL,
+                 infiltration_density_dir    = NULL,
+                 infiltration_density_file   = NULL,
+                 infiltration_area_dir       = NULL,
+                 infiltration_area_file         = NULL,
+                 infiltration_band_assignments_file = NULL,
+                 fov_stats_dir               = NULL,
+                 fov_density_dir             = NULL,
+                 fov_density_file            = NULL,
+                 fov_area_dir                = NULL,
+                 fov_area_file               = NULL)
 
     if(setDefaultDirectoryStruct){
         if(is.null(studyName)){
@@ -449,26 +457,77 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
     return(sCfg)
 }
 
-
-configureStudy <- function(studyName=NULL, studyDir=getwd(), setDefaultDirectoryStruct=TRUE, configDir=NULL, 
+#' Configure study
+#'
+#' Set study parameters and write YAML file to be used as study config
+#'
+#' @param studyName
+#' @param studyDir
+#' @param setDefaultDirectoryStructure
+#' @param configDir
+#' @param studyConfigFile
+#' @param raw_data_dir
+#' @param raw_data_files
+#' @param data_dir
+#' @param data_files
+#' @param meta_dir
+#' @param meta_files
+#' @param annotations_dirs
+#' @param annotations_files
+#' @param drift_dir
+#' @param drift_files
+#' @param study_dir
+#' @param cohort_dir
+#' @param infiltration_dir
+#' @param fov_stats_dir
+#' @param infiltration_density_dir
+#' @param infiltration_area_dir
+#' @param infiltration_density_file
+#' @param infiltration_area_file
+#' @param fov_density_dir
+#' @param fov_density_file
+#' @param fov_area_dir
+#' @param fov_area_file
+#' @param marker_config_file
+#' @param plot_config_file
+#' @param marker_analysis_config_file
+#' @param celltype_config_file
+#' @param log
+#' @param debug
+#' @param raw_marker_combo_table_file
+#' @param pad
+#' @param drift_threshold
+#' @param updateExistingConfigFiles
+#' @param write_csv_files
+#' @param max_g
+#' @param band_width
+#' @param maximum_distance_from_interface
+#' @return nothing 
+#' @export
+configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStruct=TRUE, configDir=NULL, 
                            studyConfigFile=NULL, raw_data_dir=NULL, raw_data_files=NULL, 
                            data_dir=NULL, data_files=NULL, meta_dir=NULL, meta_files=NULL, 
                            annotations_dirs=NULL, annotations_files=NULL,
                            drift_dir=NULL, drift_files=NULL, study_dir=NULL, cohort_dir=NULL, 
                            infiltration_dir=NULL, fov_stats_dir=NULL, infiltration_density_dir=NULL, 
-                           infiltration_density_files=NULL, infiltration_area_dir=NULL, 
-                           infiltration_area_files=NULL, fov_density_dir=NULL, fov_density_files=NULL,
-                           fov_area_dir=NULL, fov_area_files=NULL, marker_config_file=NULL,
-                           plot_config_file=NULL, log=NULL, debug=TRUE, 
-                           pad=20, drift_threshold=0.1, updateExistingConfigFiles=TRUE, write_csv_files=TRUE){
+                           infiltration_density_file=NULL, infiltration_area_dir=NULL, infiltration_band_assignments_file=NULL,
+                           infiltration_area_file=NULL, fov_density_dir=NULL, fov_density_file=NULL,
+                           fov_area_dir=NULL, fov_area_file=NULL, marker_config_file=NULL,
+                           plot_config_file=NULL, marker_analysis_config_file=NULL, celltype_config_file=NULL, log=NULL, debug=TRUE, raw_marker_combo_table_file=NULL,
+                           pad=20, drift_threshold=0.1, updateExistingConfigFiles=TRUE, write_csv_files=TRUE,
+                           max_g=5, band_width=10, maximumDistanceFromInterface=360){
 
     allConfig <- c("studyName", "studyDir", "configDir", "raw_data_dir", "raw_data_files",
                    "data_dir", "data_files", "meta_dir", "meta_files", "drift_dir", "drift_files",
                    "annotations_dirs", "annotations_files", "write_csv_files",
                    "study_dir", "cohort_dir", "infiltration_dir", "fov_stats_dir", "infiltration_density_dir", 
-                   "infiltration_area_dir", "infiltration_density_files", "infiltration_area_files", 
-                   "fov_density_dir", "fov_density_files", "fov_area_dir", "fov_area_files", 
-                   "log", "debug", "pad", "drift_threshold", "plot_config_file", "marker_config_file")
+                   "infiltration_area_dir", "infiltration_density_file", "infiltration_area_file", "infiltration_band_assignments_file",
+                   "fov_density_dir", "fov_density_file", "fov_area_dir", "fov_area_file", 
+                   "log", "debug", "pad", "drift_threshold", "plot_config_file", "marker_config_file",
+                   "celltype_config_file", "marker_analysis_config_file", "raw_marker_combo_table_file",
+                   "max_g", "band_width", "maximum_distance_from_interface")
+
+    if(is.null(studyDir)){ studyDir <- getwd() }
 
     ## create template
     print("Creating template study config")
@@ -505,7 +564,9 @@ print(paste0("setting param ",param," to ",get(param)))
 
     ## create directories
     for(d in names(sCfg)[grep("_dir",names(sCfg))]){
+print(d)
         if(!is.null(sCfg[[d]])){
+print(paste0("Creating dir: ",sCfg[[d]]))
             dir.create(sCfg[[d]], recursive=T, showWarnings=T)
         }
     }

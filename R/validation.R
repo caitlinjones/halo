@@ -91,3 +91,18 @@ validateExclusions <- function(dat){
         summarise(TotalCoun=sum(Count),TotFrac=sum(FracTotal))        
     }
 }
+
+#' Make sure list of unique FOVs contains only one element
+#'
+#' If the list is longer than one element, print error message and EXIT 
+#'
+#' @param uniqFOVs    vector containing list of unique FOVs in dataset
+#' @export
+validateSingleFOVFile <- function(uniqFOVs){
+    ## ensure that file contains only ONE FOV
+    if(length(uniqFOVs) > 1){
+        flog.fatal("Multiple FOVs found in this file.")
+        stop("MULTIPLE FOVs found in file. Please split file by FOV and rerun")
+    }
+}
+

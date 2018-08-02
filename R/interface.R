@@ -62,7 +62,18 @@ cellDive.loadAllData <- function(projectParams, whichFileSet){
     return(allDat)
 }
 
-
+#' Mark cells in *.rda file to be excluded from analysis
+#'
+#' Add 'EXCLUDE' column to each sample tibble indicating reason(s) why a cell should
+#' be excluded from analysis. Possible reasons include: 
+#'    (1) cell falls outside padding border
+#'    (2) lab determined FOV and/or Marker should be excluded for technical reasons
+#'    (3) drift/loss percentage is above maximum allowed value
+#'    (4) cell was determined by Halo to fall inside an area to be excluded
+#' Write updated tibble to *.rda file with "_Excl.rda" appended to original file name
+#' @param projectParams  a list of parameters for entire project including meta directory/files, drift directory, halo annotations directories, and raw data directory
+#' @return updated projectParams including data directory where new *.rda files are saved
+#' @export
 cellDive.markExclusions <- function(projectParams){
     pp <- projectParams
     ## check for data
@@ -143,49 +154,41 @@ cellDive.markExclusions <- function(projectParams){
 }
 
 
+#' Load and/or parse all Halo boundary annotations
+#' 
+#' If boundary annotations have already been parsed and saved to *.rda file, load file. Otherwise, parse all annotations, save to *.rda file and return parsed annotations.
+#'
+#' @param pp   list of all project parameters, from which it will be determined whether annotations have been previously parsed. List must include annotations_dirs and/or annotations_file parameters.
+#' @return list containing three values: 
+#'           (1) dat = list of all Halo boundary annotations organized by sample and FOV
+#'           (2) updated = logical indicating whether annotations were just parsed (TRUE) or previously parsed (FALSE)
+#'           (3) pp = updated list of project parameters
+#' @export
 cellDive.getAllBoundaryAnnotations <- function(pp){
     allHaloAnnotations <- NULL
     updated <- FALSE
-    if(!is.null(pp$annotations_file)){
-        if(grepl(".txt$",pp$annotations_file)){
-            print(paste0("Loading halo boundary annotations from TXT file: ",pp$annotations_file))
-            haloAnnotationsTxt <- read.delim(pp$annotations_file,header=T,sep="\t")
-            haloAnnotationsTxt <- split(haloAnnotationsTxt, haloAnnotationsTxt$Sample)
-            for(s in names(haloAnnotationsTxt)){
-                fovAnn <- split(haloAnnotationsTxt[[s]], haloAnnotationsTxt[[s]]$FOV)
-                for(fov in unique(haloAnnotationsTxt)){
-                    btAnn <- split(fovAnn[[fov]], fovAnn[[fov]]$RegionCode)
-                    allHaloAnnotations[[s]][[fov]] <- btAnn
-                }
-            }
-        } else if(grepl(".rda$",pp$annotations_file)){
+    if("annotations_file" %in% names(pp) && (!is.null(pp$annotations_file) || !file.exists(pp$annotations_file) || length(pp$annotations_file == 0))){
+        if(grepl(".rda$",pp$annotations_file)){
             print(paste0("Loading halo boundary annotations from RDA file: ",pp$annotations_file))
             allHaloAnnotations <- readRDS(pp$annotations_file)
         } else {
             stop(paste0("Annotations file has unrecognized format: ",pp$annotations_file))
         }
-    } else if(!is.null(pp$annotations_dirs)){
+    } else if("annotations_dirs" %in% names(pp) && !is.null(pp$annotations_dirs)){
         if(basename(pp$annotations_dirs) == "HaloCoordinates"){
-            pp$annotations_dirs <- dir(pp$annotations_dirs)
+            pp$annotations_dirs <- file.path(pp$annotations_dirs, dir(pp$annotations_dirs))
         }
         print("Getting all HALO boundary annotations")
-        allHaloAnnTXT <- NULL
-        #for(s in sampAnn$Sample_name){
         for(s in sampAnn$CELL_DIVE_ID){
             sampHaloAnn <- getAllHaloAnnotations(s, pp$annotations_dirs, boundaryColors=pp$boundary_colors)
             allHaloAnnotations[[s]] <- sampHaloAnn
         }
-        for(s in names(allHaloAnnotations)){
-            for(fov in names(sampHaloAnn)){
-               for(bt in names(sampHaloAnn[[fov]])){
-                    ann <- sampHaloAnn[[s]][[fov]][[bt]]
-                    ann$Sample <- s
-                    ann$FOV <- fov
-                    allHaloAnnTXT <- allHaloAnnTXT %>% bind_rows(ann)
-               }
-            }
+        if(!is.null(pp$annotations_file) && length(pp$annotations_file) == 1){
+            saveRDS(allHaloAnnotations, file=pp$annotations_file)
+        } else {
+            saveRDS(allHaloAnnotations, file="allHaloAnnotations.rda")
+            pp$annotations_file <- "allHaloAnnotations.rda"
         }
-        write.table(allHaloAnnTXT, file="haloAnnotations.txt", col.names=T, row.names=T, quote=F, sep="\t")
         updated=TRUE
     } else {
         print("No boundary annotations found. Can not run exclusions OR infiltration analysis.")
@@ -194,7 +197,20 @@ cellDive.getAllBoundaryAnnotations <- function(pp){
     return(list(dat=allHaloAnnotations, updated=updated, pp=pp))
 }
 
-
+#' Write XLSX table of counts for all marker combinations in all samples
+#' 
+#' Write XLSX table of counts for all marker combinations in all samples
+#' 
+#' @param pp                list of all project parameters
+#' @param allDat            tibble of all Halo data
+#' @param whichTableFile    name of parameter in pp to look at when checking to see if table already exists
+#' @param markerConfig      parsed marker configuration (value returned from getMarkerConfig())
+#' @param updatedExclusions logical indicating whether exclusions have been updated
+#' @return list of three items:  
+#'           (1) dat = list containing one item, the count table generated
+#'           (2) updated = logical indicating whether a new count table was generated (TRUE) or an old one was loaded (FALSE) 
+#'           (3) pp = updated list of project parameters
+#' @export
 cellDive.writeMarkerComboTables <- function(pp, allDat, whichTableFile, markerConfig, updatedExclusions){
     allCountTbls <- NULL
     updated <- FALSE
@@ -208,43 +224,17 @@ cellDive.writeMarkerComboTables <- function(pp, allDat, whichTableFile, markerCo
         flatMeta <- flattenMetaData(metaDir=pp$meta_dir, metaFiles=pp$meta_files)
         cellTypes <- flatMeta$MarkerCombinationAnnotation
 
-        #for(x in 1:length(allCountTbls)){
-            #s <- names(allCountTbls)[x]
-            #tbl <- allCountTbls[[s]]
-            tbl <- allCountTbls[[1]]
-            iTbl <- interpretMarkerCombos(tbl, cellTypes)
-            allCountTbls[["AllCounts"]] <- iTbl %>%
+        tbl <- allCountTbls[[1]]
+        iTbl <- interpretMarkerCombos(tbl, cellTypes)
+        allCountTbls[["AllCounts"]] <- iTbl %>%
                                  select(-c(comboString,cellTypeNum,Cell_Type,Cell_Subtype)) %>%
                                  select(Markers, Cell_Type=cellType, Cell_Subtype=subtype, Total, everything()) 
 
-
-            #allCountTbls[[s]] <- iTbl %>%
-            #        unite("Interpretation", cellType, cellTypeNum, comboString, sep = " ") %>%
-            #        dplyr::select(Count, PCT, CUM.PCT, Interpretation, everything())
-
-            #totalsByType <- as.tibble(iTbl) %>%
-            #                filter(CUM.PCT <= 0.95) %>%
-            #                group_by(cellType) %>%
-            #                summarize(Count=sum(Count),PCT=sum(PCT))
-
-            #rep_na <- as.list(rep("",ncol(iTbl)))
-            #names(rep_na) <- names(iTbl)
-            #allCountTbls[[paste0(s,"_by_cell_type")]] <- iTbl %>%
-            #                bind_rows(totalsByType) %>%
-            #                replace_na(rep_na) %>%
-            #                arrange(cellType) %>%
-            #                unite("Interpretation", cellType, cellTypeNum, comboString, sep = " ") %>%
-            #                dplyr::select(Count, PCT, CUM.PCT, Interpretation, everything())
-
-        #}
-        #uniqCT <- sort(unique(cellTypes$CellTypes$Cell_type))
-        #mcw <- markerComboWorkbook(allCountTbls, uniqCT)
         if(is.null(pp[[whichTableFile]])){
             xlsxFile <- file.path(pp$study_dir, paste0(gsub("_file","",whichTableFile),"_",format(Sys.time(), "%Y%m%d"),".xlsx"))
         } else {
             xlsxFile <- pp[[whichTableFile]]
         }
-        #saveWorkbook(as.data.frame(iTbl), xlsxFile)
         writeXLSXsheet(as.data.frame(allCountTbls[[1]]), xlsxFile, sheetName="AllCountTbls", append = FALSE)
         pp[[whichTableFile]] <- xlsxFile
         updated <- TRUE
@@ -253,7 +243,21 @@ cellDive.writeMarkerComboTables <- function(pp, allDat, whichTableFile, markerCo
     return(list(dat=allCountTbls, updated=updated, pp=pp))
 }
 
-
+#' Calculate area of each entire FOV
+#' 
+#' Generate a table of three columns: Sample, SPOT, Area
+#' 
+#' @param allDat             tibble of all Halo data
+#' @param pp                 list of all project parameters
+#' @param metaFiles          vector of meta files
+#' @param updatedExclusions  logical indicating whether exclusions were updated during current run of pipeline
+#' @param allHaloAnnotations list of parsed Halo annotations organized by sample and then FOV
+#' @param fovAreaPrefix      prefix added to 'fov_area_file' and/or 'fov_area_dir' in names of pp list (leave "" if no prefix)
+#' @return list of three items:  
+#'           (1) dat = tibble of three columns: Sample, SPOT, Area 
+#'           (2) updated = logical indicating whether a new area table was generated (TRUE) or an old one was loaded (FALSE) 
+#'           (3) pp = updated list of project parameters
+#' @export
 cellDive.calculateTotalFOVarea <- function(allDat, pp, metaFiles, updatedExclusions, allHaloAnnotations=NULL, fovAreaPrefix=""){
     fovAreas <- NULL
     updated <- FALSE
@@ -294,6 +298,22 @@ cellDive.calculateTotalFOVarea <- function(allDat, pp, metaFiles, updatedExclusi
     return(list(dat=fovAreas, updated=updated, pp=pp))
 }
 
+#' Calculate density of markers in each full FOV
+#' 
+#' Generate table of four columns: Sample, SPOT, Counts, Density
+#' 
+#' @param allDat          all Halo data
+#' @param markerConfig    tibble of parsed marker configuration (value returned from getMarkerConfig)
+#' @param fovAreas        tibble of areas for each FOV in each Sample (value returned from cellDive.calculateTotalFOVarea)
+#' @param pp              list of all project parameters
+#' @param updatedFOVareas logical indicating whether FOV areas were updated during current pipeline run
+#' @param updatedComboTable  logical indicating whether combo table was updated during current pipeline run
+#' @param fovDensityPrefix  prefix added to prefix added to 'fov_density_file' and/or 'fov_density_dir' in names of pp list (leave "" if no prefix) 
+#' @return list of three items:  
+#'           (1) dat = tibble of three columns: Sample, SPOT, Count, Density 
+#'           (2) updated = logical indicating whether a new density table was generated (TRUE) or an old one was loaded (FALSE) 
+#'           (3) pp = updated list of project parameters
+#' @export
 cellDive.calculateTotalFOVdensity <- function(allDat, markerConfig, fovAreas, pp, updatedFOVareas, updatedComboTable, fovDensityPrefix=""){
     mCfg <- markerConfig
     fovDensity <- NULL
@@ -333,12 +353,25 @@ cellDive.calculateTotalFOVdensity <- function(allDat, markerConfig, fovAreas, pp
     return(list(dat=fovDensity, pp=pp, updated=updated))
 }
 
+#' Calculate infiltration area
+#' 
+#' Generate table with columns: Sample, SPOT, Band, Area
+#' 
+#' @param allDat           tibble of all halo data
+#' @param pp               list of all project parameters
+#' @param haloAnnotations  list of parsed halo annotations organized by sample and then by FOV
+#' @param updatedExclusions  logical indicating whether exclusions (haloAnnotations) were updated during current run of the pipeline
+#' @return list of three items:
+#'           (1) dat = list where area = table of Sample,SPOT,Area and bandAssignments = table of 0/1 for each marker in each cell, plus a column "Band" indicating roughly how far the cell lies from a tumor interface
+#'           (2) updated = logical indicating whether table being returned was generated (TRUE) or loaded from existing file (FALSE)
+#'           (3) pp = updated list of project parameters
+#' @export 
 cellDive.calculateInfiltrationArea <- function(allDat, pp, haloAnnotations, updatedExclusions){
     updated <- FALSE
 
-    if(is.null(pp$interface_area_file) || length(pp$interface_area_file) == 0 || !file.exists(pp$interface_area_file) ||
-       is.null(pp$interface_band_assignments_file) || length(pp$interface_band_assignments_file) == 0 || 
-       !file.exists(pp$interface_band_assignments_file) || updatedExclusions){
+    if(is.null(pp$infiltration_area_file) || length(pp$infiltration_area_file) == 0 || !file.exists(pp$infiltration_area_file) ||
+       is.null(pp$infiltration_band_assignments_file) || length(pp$infiltration_band_assignments_file) == 0 || 
+       !file.exists(pp$infiltration_band_assignments_file) || updatedExclusions){
 
         interfaceBins <- (-(pp$max_distance_from_interface/pp$band_width):(pp$max_distance_from_interface/pp$band_width))*pp$band_width
 
@@ -348,18 +381,29 @@ cellDive.calculateInfiltrationArea <- function(allDat, pp, haloAnnotations, upda
         ia <- samp_ia$area
         ba <- samp_ia$bandAssignments
 
-        pp$interface_area_file <- file.path(pp$interface_area_dir, "all_samples_interface_area.csv")
-        pp$interface_band_assignments_file <- file.path(pp$interface_area_dir, "all_samples_band_assignments.csv")
+        pp$infiltration_area_file <- file.path(pp$infiltration_area_dir, "all_samples_interface_area.csv")
+        pp$infiltration_band_assignments_file <- file.path(pp$infiltration_area_dir, "all_samples_band_assignments.csv")
         updated <- TRUE
     } else {
-        ba <- as.tibble(read.delim(pp$interface_band_assignments_file,header=T,sep=",",check.names=FALSE))
-        ia <- as.tibble(read.delim(pp$interface_area_file,header=T,sep=",",check.names=FALSE))
+        ba <- as.tibble(read.delim(pp$infiltration_band_assignments_file,header=T,sep=",",check.names=FALSE))
+        ia <- as.tibble(read.delim(pp$infiltration_area_file,header=T,sep=",",check.names=FALSE))
     }
 
     return(list(dat=list(area=ia, bandAssignments=ba), pp=pp, updated=updated))
 }
 
-cellDive.fillInMarkerComboInterpretations <- function(xlfile=NULL, markerComboTable=NULL, outDir=getwd(), allCellTypes=NULL){
+#' Add columns Cell_Type and Cell_Subtype to marker counts file
+#' 
+#' Given a table where the first three columns = Markers, Cell_Type, and Cell_Subtype and Cell_Type/Subtype are blank, and the remaining columns contain total counts for each marker combination in a single sample, fill in blank columns using meta data files
+#'
+#' @param xlfile            XLSX file containing table described above; default=NULL; if not specified, markerComboTable must be given
+#' @param markerComboTable  marker combination table returned from cellDive.getMarkerCombinationTable(); if not specified, must provide xlfile
+#' @param outDir            directory where xlsx file should be saved
+#' @param allCellTypes      parsed cell types as returned by flattenMetaData()
+#' @return marker combo table with columns Cell_Type and Cell_Subtype filled in
+#' @export
+cellDive.fillInMarkerComboInterpretations <- function(xlfile=NULL, markerComboTable=NULL, outDir=NULL, allCellTypes=NULL){
+    if(is.null(outDir)){ outDir <- getwd() }
     if(is.null(markerComboTable)){
         if(is.null(xlfile)){ stop("Please provide either xlfile or markerComboTable") }
         markerComboTable <- as.tibble(read.xlsx(xlfile,1))
@@ -374,7 +418,21 @@ cellDive.fillInMarkerComboInterpretations <- function(xlfile=NULL, markerComboTa
     return(markerComboTbl3)
 }
 
-
+#' Calculate infiltration density
+#'
+#' Generate table with five columns: Sample,SPOT,Band,Counts,Density
+#' 
+#' @param markerConfig             parsed marker configuration (as returned by getMarkerConfig())
+#' @param infiltrationAreas        area table containing Sample,SPOT,Band,Area
+#' @param bandAssignments          table containing Band column where each value is an assignment for a single cell to a specific distance band around a tumor interface
+#' @param pp                       list of all project parameters
+#' @param updatedInfiltrationAreas logical indicating whether infiltration areas were updated during the current pipeline run
+#' @param infiltrationDensityPrefix  prefix added to infiltration_density_file/dir in list of project params; leave equal to "" to indicate no prefix added
+#' @return list of three items:
+#'           (1) dat = table including Sample,SPOT,Band,Counts,Density 
+#'           (2) updated = logical indicating whether table being returned was generated (TRUE) or loaded from existing file (FALSE)
+#'           (3) pp = updated list of project parameters
+#' @export 
 cellDive.calculateInfiltrationDensity <- function(markerConfig, infiltrationAreas, bandAssignments, 
                                                   pp, updatedInfiltrationAreas, 
                                                   infiltrationDensityPrefix=""){
