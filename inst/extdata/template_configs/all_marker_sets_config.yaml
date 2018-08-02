@@ -1,0 +1,119 @@
+all_cell_type_markers:
+    - CD45
+    - SOX10
+    - PCK26
+    - CD3
+    - CD4
+    - CD8
+    - FOXP3
+    - CD20
+    - CD56
+    - FOXP3
+    - CD20
+    - CD56
+    - CD14
+    - CD163
+    - CD68
+    - CD14
+    - S100B
+    - DAPI
+marker_sets:
+    exhaustion:
+        populations:
+            - CD3,CD8,FOXP3
+            - CD3,CD4,FOXP3
+            - CD3,CD8
+            - CD3,CD4
+            - CD3,CD4,CD8
+
+        functional:
+            - PD1,TIM3,LAG3
+            - PD1,TIM3
+            - PD1,LAG3
+            - TIM3,LAG3
+            - PD1
+            - LAG3
+            - TIM3
+
+        identity_negatives:
+            TRUE 
+
+        cell_type_labels:
+            remove_population_markers:
+                TRUE
+            remove_negative_markers:
+                TRUE
+
+    tim3:
+        populations:
+            - CD56
+            - CD14
+            - CD163
+            - CD68
+            - CD56,CD3
+
+        functional:
+            - TIM3
+
+        identity_negatives:
+            TRUE
+
+        functional_negatives:
+            TRUE
+
+        cell_type_labels:
+            remove_population_markers:
+                FALSE
+            remove_negative_markers:
+                TRUE
+            special_labels:
+                CD68:
+                    TIM3-
+                CD68,TIM3:
+                    TIM3
+                CD14:
+                    TIM3-
+                CD14,TIM3:
+                    TIM3
+                CD163:
+                    TIM3-
+                CD163,TIM3:
+                    TIM3
+                CD56:
+                    TIM3-
+                CD56,TIM3:
+                    TIM3
+                CD56,CD3,TIM3:
+                    TIM3
+                CD56,CD3:
+                    TIM3-
+
+
+    identity:
+        populations:
+            - CD3,CD4
+            - CD3,CD8
+            - CD3,CD4,CD8
+            - CD3,CD4,FOXP3
+            - CD3,CD8,FOXP3
+            - CD20
+            - CD56
+            - CD56,CD3
+            - CD14
+            - CD163
+            - CD68
+
+        cell_type_labels:
+            remove_population_markers:
+                FALSE
+            remove_negative_markers:
+                TRUE
+
+        identity_negatives:
+            TRUE
+
+
+cell_identity_markers:
+    [SOX10,CD3,CD4,CD8,FOXP3,CD56,CD20,CD14,CD163,CD68,TGM2,MRC1]
+
+

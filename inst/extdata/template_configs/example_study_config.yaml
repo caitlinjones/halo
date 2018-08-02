@@ -1,0 +1,153 @@
+######### Example Cell Dive/Halo pipeline configuration
+
+############################################
+######## MINIMUM REQUIRED PARAMETERS #######
+########     (always required)       #######
+############################################
+###
+study_name: Cohort2
+
+### 
+study_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2
+
+### 
+config_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/config
+
+### directory containing study meta data .xlsx files created by lab member; if left empty, must provide meta_files
+meta_dir: /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/MetaData
+
+#### list of study meta data .xlsx files created by lab member; if left empty, must provide meta_dir 
+meta_files: ~
+
+### directory where *.rda files WITH exclusions either are or will be
+data_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/objectAnalysisData
+
+### TO DO: check if this is even used any more
+out_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2
+
+#### pipeline log
+log: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/cohort2.log
+
+### *.rda file containing pre-parsed halo boundary annotations in nested list form; if not given, must
+#### provide annotations_dirs
+annotations_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/allHaloAnnotations.rda
+
+#### directory containing subdirectories of halo boundary annotation files in XML format; NOTE:
+#### the code for this will need to be changed if/when directory format changes
+annotations_dirs: /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates
+
+### write intermediate results to CSV files wherever possible
+write_csv_files: yes
+
+### print detailed progress/debug messages to log
+debug: yes
+
+##############################################
+####### REQUIRED FOR MARKING EXCLUSIONS ######
+##############################################
+### directory containing Nick's *.rda files without exclusions (not required if exclusions were already run)
+raw_data_dir: /home/socci/Work/Users/MellingI/Halo/Melanoma_IL2__Final/Cohort2/data/Melanoma_IL2__Final_C2_v1
+
+### directory containing drift summary files; if running exclusions and this value is empty, must provide drift_files
+drift_dir: /ifs/tcga/socci/Multiomyx/Cell_drift_loss_masks/melanoma_drift_result/drift_summary
+
+### list of drift summary files; if running exclusions and this value is empty, must provide drift_dir
+drift_files: ~
+
+### directory where debug plots will be saved
+debug_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/debug
+
+### number in pixels to trim from each FOV
+pad: 20.0
+
+### maximum fraction of drift to allow in order to include a cell in analysis
+drift_threshold: 0.1
+
+
+###########################
+###    Rethresholding   ###
+###########################
+### directory containing *.rda files with rethresholded intensities and marker reassignments
+rethresholded_data_dir: /ifs/tcga/socci/Multiomyx/SocciN/Results/ReThreshold/2018-07-01/NewThresholdV5r1
+
+
+##################################
+###  Marker combination table  ###
+##################################
+
+### YAML file containing plot configuration
+plot_config_file: /home/byrne/halo/data/template_configs/plot_config.yaml
+
+#### YAML file containing configuration of markers used for cell type combination file; see example file
+#### for specifics
+celltype_config_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/config/template_marker_config.yaml
+
+#### YAML file containing configuration of markers to be analyzed and plotted
+marker_analysis_config_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/config/all_marker_sets_config.yaml
+
+### marker combination XLSX file with pre-rethreshold counts
+pre_rethreshold_combo_table_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/pre_rethreshold_marker_combo_table_20180703.xlsx
+
+#### marker combination XLSX file with post-rethreshold counts
+post_rethreshold_marker_combo_table_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/post_rethreshold_marker_combo_table_20180705.xlsx
+
+
+###############################
+###    FOV-level analyses   ###
+###############################
+
+### FOV-level analyses directory structure
+fov_stats_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data
+fov_density_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density
+fov_area_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area
+
+### CSV file containing (or that will contain) FOV-level area data
+fov_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area/All_samples_area.csv
+
+### CSV file containing (or that will contain) FOV-level density data
+fov_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density/All_samples_density.csv
+
+### FOV level area pre-rethreshold
+pre_rethreshold_fov_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area/pre_rethreshold_All_samples_area.csv
+
+### FOV level area post-rethreshold  #### PRE AND POST AREA SHOULD BE THE SAME, NO?
+post_rethreshold_fov_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/area/post_rethreshold_All_samples_area.csv
+
+### FOV level density pre-rethreshold
+pre_rethreshold_fov_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density/pre_rethreshold_All_samples_density.csv
+
+### FOV level density post-rethreshold
+post_rethreshold_fov_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/fov_data/density/post_rethreshold_All_samples_density.csv
+
+
+#################################
+### Interface-level  analyses ###
+#################################
+
+#### run infiltration-level stats
+by_band: yes
+
+#### for infiltration analyses, the maximum distance from tumor boundary (both inside and outside of tumor) 
+#### to consider for analysis
+max_distance_from_interface: 360
+
+#### width in pixels of intervals/bands into which interface will be divided 
+band_width: 10
+
+### infiltration directory structure
+infiltration_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration
+infiltration_density_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/density
+infiltration_area_dir: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/area
+
+### CSV file containing (or that will contain) infiltration area data
+infiltration_area_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltraion/area/All_samples_area.csv
+
+### CSV file containing (or that will contain) infiltration band assignments
+### NOTE: WILL THIS CHANGE AFTER RETHRESHOLDING?
+infiltration_band_assignments_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/area/All_samples_band_assignments.csv
+
+### CSV file containing (or that will contain) infiltration density data from pre-rethresholding data
+pre_rethreshold_infiltration_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/density/pre_rethreshold_All_samples_density.csv
+
+### CSV file containing (or that will contain) infiltration density data from post-rethresholding data
+post_rethreshold_infiltration_density_file: /home/byrne/halo/data/Melanoma_IL2__Final/Cohort2/infiltration/density/post_rethreshold_All_samples_density.csv
