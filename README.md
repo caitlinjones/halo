@@ -52,7 +52,7 @@ Run from scratch, including marking exclusions
 Rscript scripts/final_pipeline.R -m config/study_config.yaml --markExclusions
 ```
 
-NOTES: 
+### NOTES: 
 * Currently the pipeline runs the following steps:
    - parse and store all halo boundaries
    - mark exclusions & generate debug plots
@@ -62,9 +62,11 @@ NOTES:
    - calculate infiltration area and marker densities (by distance intervals from tumor interfaces)
    - plot infiltration marker densities
 
-* Exclusions need to be marked only once. Once run, study_config.yaml will be updated to include data_dir, which will point to the directory containing \*.rda files that include exclusions. For any subsequent pipeline runs, do NOT include markExclusions unless meta data, drift data or Halo boundary data has changed. 
+* Exclusions need to be marked only once. Once run, __study_config.yaml__ will be updated to include data_dir, which will point to the directory containing \*.rda files that include EXCLUDE columns. For any subsequent pipeline runs, do NOT use __--markExclusions__ unless meta data, drift data or Halo boundary data has changed. 
 
-* study_config.yaml will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies are unchanged.
+* Similarly, if starting pipeline using \*.rda files that already have EXCLUDE columns, fill in __data_dir__ or __data_files__ in __study_config.yaml__ and do NOT use __--markExclusions__.
+
+* __study_config.yaml__ will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies already exist and remain unchanged during current run.
  
 
  

@@ -35,6 +35,11 @@ fov_area_file: ~
 config_dir: /home/byrne/halo/dev/halodev/tests/halodevTest/config
 studyName: halodevTest
 studyDir: /home/byrne/halo/dev/halodev/tests
-annotations_dirs: /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates
+annotations_dirs:
+    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/EpidermisCoordinates
+    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/ExclusionCoordinates
+    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/GlassCoordinates
+    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/InterfaceCoordinates
 write_csv_files: yes
+annotations_file: allHaloAnnotations.rda
 
