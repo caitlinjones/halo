@@ -14,8 +14,6 @@ library(devtools)
 install_github("caitlinjones/halo")
 ```
 ### Step 2: Create manifest with all project parameters including input files
-Example [here](example/manifest.txt) 
-
 Run
 ```{r eval=FALSE}
 cd [WORKING_DIRECTORY]
@@ -71,8 +69,10 @@ Rscript scripts/final_pipeline.R -m config/study_config.yaml
 
 * Similarly, if starting pipeline using \*.rda files that already have EXCLUDE columns, fill in __data_dir__ or __data_files__ in __study_config.yaml__ and do NOT use __--markExclusions__.
 
-* If not provided during configuration, __study_config.yaml__ will be automatically generated with default values. __IMPORTANT__: Valiation of config files is not yet implemented. Make sure to manually review and modify files as necessary. 
+* If not provided during configuration, __study_config.yaml__ will be automatically generated with default values. __IMPORTANT__: Validation of config files is not yet implemented. Make sure to manually review and modify files as necessary. 
 
 * __study_config.yaml__ will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies already exist and remain unchanged during current run. To turn this default behavior off, use __--noConfigOverwrite__.
  
 * If an existing __cellTypeConfigFile__ configuration file is not provided during a configuration, one will be generated based on __\*CellTypes.xlsx__ file in meta data directory, and can be manually modified if necessary before running pipeline.
+
+* __markerConfigFile__ is used for plotting density values. A template exists, but there is currently no auto-generation of this file. See documentation (TO BE CREATED) for details on the format of this file.
