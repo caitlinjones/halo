@@ -1,0 +1,22 @@
+plot_options:
+    marker_colors:
+        Negative: '#caced1'
+        CD3,CD8,FOXP3: gray
+        CD3,CD4,FOXP3: gray
+        CD3,CD8: gray
+        CD3,CD4: gray
+        CD3,CD4,CD8: gray
+        PD1,TIM3,LAG3: gray
+        PD1,TIM3: gray
+        PD1,LAG3: gray
+        TIM3,LAG3: gray
+        PD1: gray
+        LAG3: gray
+        TIM3: gray
+        CD56: gray
+        CD14: gray
+        CD163: gray
+        CD68: gray
+        CD56,CD3: gray
+        CD20: gray
+

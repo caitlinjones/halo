@@ -1,4 +1,4 @@
-raw_data_dir: /home/byrne/halo/dev/halodev/tests/data
+raw_data_dir: ~
 raw_data_files: ~
 data_dir: /home/byrne/halo/dev/halodev/tests/objectAnalysisData
 data_files: ~
@@ -8,10 +8,10 @@ drift_dir: /ifs/tcga/socci/Multiomyx/Cell_drift_loss_masks/melanoma_drift_result
 drift_files: ~
 study_dir: /home/byrne/halo/dev/halodev/tests/halodevTest
 log: /home/byrne/halo/dev/halodev/tests/halodevTest/halodevTest.log
-marker_config_file: /home/byrne/halo/data/template_configs/template_marker_config.yaml
-plot_config_file: /home/byrne/halo/data/template_configs/plot_config.yaml
+marker_config_file: /home/byrne/halo/data/template_configs/all_marker_sets_config.yaml
+plot_config_file: /home/byrne/halo/dev/halodev/tests/halodevTest/config/plot_config.yaml
 raw_marker_combo_table_file: ~
-celltype_config_file: /home/byrne/halo/data/template_configs/template_marker_config.yaml
+cell_type_config_file: /home/byrne/halo/dev/halodev/tests/halodevTest/config/auto_cell_type_config.yaml
 marker_analysis_config_file: ~
 pad: 20
 drift_threshold: 0.1
@@ -35,11 +35,6 @@ fov_area_file: ~
 config_dir: /home/byrne/halo/dev/halodev/tests/halodevTest/config
 studyName: halodevTest
 studyDir: /home/byrne/halo/dev/halodev/tests
-annotations_dirs:
-    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/EpidermisCoordinates
-    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/ExclusionCoordinates
-    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/GlassCoordinates
-    - /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates/InterfaceCoordinates
+annotations_dirs: /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates
 write_csv_files: yes
-annotations_file: allHaloAnnotations.rda
 

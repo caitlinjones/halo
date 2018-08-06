@@ -456,10 +456,9 @@ cellDive.calculateInfiltrationDensity <- function(markerConfig, infiltrationArea
         return(list(dat=NULL, pp=pp, updated=FALSE))
     }
 
-    if(is.null(pp[[file_key]]) || length(pp[[file_key]])==0 || !file.exists(pp[[file_key]]) || updatedInfiltrationAreas || updatedComboTable){
-        infiltrationDensity <- NULL
+    if(is.null(pp[[file_key]]) || length(pp[[file_key]])==0 || !file.exists(pp[[file_key]]) || updatedInfiltrationAreas){
         for(s in unique(bandAssignments$Sample)){
-            #dat <- allDat %>% filter(Sample == s)
+print(s)
             ia <- infiltrationAreas %>% filter(Sample == s)
             ba <- bandAssignments %>% filter(Sample == s)
             den <- calculateInfiltrationDensity(ia, ba, markerCombos, writeCSVfiles=pp$write_csv_files, 
@@ -467,11 +466,12 @@ cellDive.calculateInfiltrationDensity <- function(markerConfig, infiltrationArea
             infiltrationDensity <- bind_rows(infiltrationDensity, den)
         }
         if(pp$write_csv_files){
-            fileName <- "All_samples_density.csv"
+            fileName <- "all_samples_density.csv"
             if(!infiltrationDensityPrefix==""){
                 fileName <- paste0(infiltrationDensityPrefix,"_",fileName)
             }
-            pp[[file_key]] <- file.path(pp$infiltration_density_dir,fileName)
+            pp[[file_key]] <- file.path(pp$infiltration_density_dir, fileName)
+            write_csv(as.data.frame(infiltrationDensity), file.path(pp$infiltration_density_dir, fileName)) 
         }
         updated <- TRUE
     } else {

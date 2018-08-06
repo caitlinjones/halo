@@ -26,7 +26,6 @@ Rscript scripts/configure_halo_pipeline.R \
      --metaDir /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/MetaData \
      --driftDir /ifs/tcga/socci/Multiomyx/Cell_drift_loss_masks/melanoma_drift_result/drift_summary \
      --markerConfigFile /home/byrne/halo/data/template_configs/template_marker_config.yaml \
-     --cellTypeConfigFile /home/byrne/halo/data/template_configs/template_marker_config.yaml \
      --plotConfigFile /home/byrne/halo/data/template_configs/plot_config.yaml \
      --annotationsDirs /ifs/tcga/socci/Multiomyx/HaloData/Melanoma_IL2__Final/Cohort2/HaloCoordinates \
      --setDefaultDirectoryStructure
@@ -72,7 +71,8 @@ Rscript scripts/final_pipeline.R -m config/study_config.yaml
 
 * Similarly, if starting pipeline using \*.rda files that already have EXCLUDE columns, fill in __data_dir__ or __data_files__ in __study_config.yaml__ and do NOT use __--markExclusions__.
 
+* If not provided during configuration, __study_config.yaml__ will be automatically generated with default values. __IMPORTANT__: Valiation of config files is not yet implemented. Make sure to manually review and modify files as necessary. 
+
 * __study_config.yaml__ will be updated as the pipeline runs to point to any new files generated during the run. This will allow steps to be skipped in future runs if their dependencies already exist and remain unchanged during current run. To turn this default behavior off, use __--noConfigOverwrite__.
  
-
- 
+* If an existing __cellTypeConfigFile__ configuration file is not provided during a configuration, one will be generated based on __\*CellTypes.xlsx__ file in meta data directory, and can be manually modified if necessary before running pipeline.

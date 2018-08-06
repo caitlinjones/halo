@@ -285,7 +285,7 @@ flattenMetaData <- function(metaDir=NULL,metaFiles=NULL, sampAnnFile=NULL, fovAn
 #' @param outDir          directory where YAML file should be written; default=getwd()    
 #' @return all marker information and default marker configuration values
 #' @export
-getTemplateMarkerConfig <- function(allCellTypes=NULL, cellTypesFile=NULL, writeYAML=TRUE, outDir=getwd()){
+getTemplateCellTypeConfig <- function(allCellTypes=NULL, cellTypesFile=NULL, writeYAML=TRUE, outDir=getwd()){
     if(is.null(allCellTypes)){
 print("allCellTypes is null")
         cellTypes <- read.xlsx(cellTypesFile, sheetName="Simple",stringsAsFactors=FALSE)
@@ -296,7 +296,8 @@ print("allCellTypes is null")
 
     mCfg <- list()
 
-    mCfg$all_cell_type_markers <- gsub("-","",unique(unlist(strsplit(allCellTypes$Marker_combination,","))))
+    mCfg$all_cell_type_markers <- unique(gsub("-","",unlist(strsplit(allCellTypes$Marker_combination,","))))
+    mCfg$all_cell_type_markers <- c("DAPI",mCfg$all_cell_type_markers)
     mCfg$cell_type_marker_combinations <- unique(allCellTypes$Marker_combination)
     mCfg$marker_sets <- list()
 
@@ -311,7 +312,7 @@ print("allCellTypes is null")
     }
 
     if(writeYAML){
-        write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=file.path(outDir, "template_marker_config.yaml"))
+        write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=file.path(outDir, "template_cell_type_config.yaml"))
     } 
 
     return(mCfg)
@@ -412,7 +413,7 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
                  marker_config_file          = NULL,
                  plot_config_file            = NULL,
                  raw_marker_combo_table_file = NULL,
-                 celltype_config_file        = NULL,
+                 cell_type_config_file        = NULL,
                  marker_analysis_config_file = NULL,
                  pad                         = 20,
                  drift_threshold             = 0.1,
@@ -491,7 +492,7 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
 #' @param marker_config_file
 #' @param plot_config_file
 #' @param marker_analysis_config_file
-#' @param celltype_config_file
+#' @param cell_type_config_file
 #' @param log
 #' @param debug
 #' @param raw_marker_combo_table_file
@@ -513,7 +514,7 @@ configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStr
                            infiltration_density_file=NULL, infiltration_area_dir=NULL, infiltration_band_assignments_file=NULL,
                            infiltration_area_file=NULL, fov_density_dir=NULL, fov_density_file=NULL,
                            fov_area_dir=NULL, fov_area_file=NULL, marker_config_file=NULL,
-                           plot_config_file=NULL, marker_analysis_config_file=NULL, celltype_config_file=NULL, log=NULL, debug=TRUE, raw_marker_combo_table_file=NULL,
+                           plot_config_file=NULL, marker_analysis_config_file=NULL, cell_type_config_file=NULL, log=NULL, debug=TRUE, raw_marker_combo_table_file=NULL,
                            pad=20, drift_threshold=0.1, updateExistingConfigFiles=TRUE, write_csv_files=TRUE,
                            max_g=5, band_width=10, maximumDistanceFromInterface=360){
 
@@ -524,7 +525,7 @@ configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStr
                    "infiltration_area_dir", "infiltration_density_file", "infiltration_area_file", "infiltration_band_assignments_file",
                    "fov_density_dir", "fov_density_file", "fov_area_dir", "fov_area_file", 
                    "log", "debug", "pad", "drift_threshold", "plot_config_file", "marker_config_file",
-                   "celltype_config_file", "marker_analysis_config_file", "raw_marker_combo_table_file",
+                   "cell_type_config_file", "marker_analysis_config_file", "raw_marker_combo_table_file",
                    "max_g", "band_width", "maximum_distance_from_interface")
 
     if(is.null(studyDir)){ studyDir <- getwd() }
@@ -576,10 +577,10 @@ print(paste0("Creating dir: ",sCfg[[d]]))
        print("flattening meta data")
        flatMeta <- flattenMetaData(metaDir=sCfg$meta_dir, metaFiles=sCfg$meta_files)
        print("getting marker config")
-       tmpMarkerCfg <- getTemplateMarkerConfig(allCellTypes=flatMeta$MarkerCombinationAnnotation$CellTypes,
+       tmpMarkerCfg <- getTemplateCellTypeConfig(allCellTypes=flatMeta$MarkerCombinationAnnotation$CellTypes,
                                                writeYAML=F, outDir=sCfg$config_dir)
-       if(!is.null(sCfg$marker_config_file) && file.exists(sCfg$marker_config_file)){
-           mCfg <- read_yaml(sCfg$marker_config_file)
+       if(!is.null(sCfg$cell_type_config_file) && file.exists(sCfg$cell_type_config_file)){
+           mCfg <- read_yaml(sCfg$cell_type_config_file)
            if(updateExistingConfigFiles && !all(names(tmpMarkerCfg) %in% names(mCfg))){
                mCfg <- c(mCfg, tmpMarkerCfg[-which(names(tmpMarkerCfg) %in% names(mCfg))])
                for(p in names(mCfg)){
@@ -587,15 +588,15 @@ print(paste0("Creating dir: ",sCfg[[d]]))
                        mCfg[[p]] <- tmpMarkerCfg[[p]]
                    }
                }
-               print(paste0("WARNING: Overwriting existing marker config file ",sCfg$marker_config_file))
-               write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$marker_config_file)
+               print(paste0("WARNING: Overwriting existing cell type config file ",sCfg$cell_type_config_file))
+               write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$cell_type_config_file)
            }
        } else {
            ## write marker config template if one does not exist
            print("Writing marker config template")
            mCfg <- tmpMarkerCfg
-           sCfg$marker_config_file <- file.path(sCfg$config_dir, "template_marker_config.yaml") 
-           write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$marker_config_file)
+           sCfg$cell_type_config_file <- file.path(sCfg$config_dir, "auto_cell_type_config.yaml") 
+           write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$cell_type_config_file)
        }
 
        print("setting up plot config")

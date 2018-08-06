@@ -463,13 +463,13 @@ calculateInfiltrationDensity <- function(areas, bandAssignments, markerSet,
 
   for(spot in unique(areas$SPOT)){
     flog.debug("working on spot %s",spot)
-
+print(spot)
     if(statsByBand){
       mtB <- mtCounts %>% filter(SPOT == spot, !is.na(Band))
       bnds <- unique(mtB$Band)
       a <- areas %>% filter(SPOT == spot) %>%
-                     select(Sample,SPOT,bnds) %>%
-                     gather(key="Band", value="Area", bnds)
+                     select(Sample,SPOT,which(names(areas) %in% bnds)) %>%
+                     gather(2:length(bnds)+2, key="Band", value="Area")
       MM <- 1/a$Area
 
       
@@ -655,7 +655,14 @@ calculateFOVStats <- function(aFiles, data, markerSet, cellTypeName,
 
 }
 
-
+#' Get all absolute and percentage density values for complete FOVs
+#' 
+#' TO DO: REMOVE????
+#'
+#' @param den
+#' @param areaDat
+#' @return table of all density values
+#' @export
 getAllDensityValues <- function(den, areaDat){
     den$FOVArea <- 0
     den$FOVDensity <- 0
@@ -698,6 +705,14 @@ getAllDensityValues <- function(den, areaDat){
 }
 
 
+#' Calculate absolute and percentage density values by Sample, FOV, Band
+#' 
+#' Calculate absolute and percentage density values by Sample, FOV, Band
+#' 
+#' @param den
+#' @param areaDat
+#' @return table of all density values
+#' @export
 getAllInfiltrationDensityValues <- function(den, areaDat){
     den$FOVArea <- 0
     den$FOVDensity <- 0
@@ -790,7 +805,19 @@ getAllInfiltrationDensityValues <- function(den, areaDat){
     return(den)
 }
 
-
+#' Calculate total area in each FOV
+#'
+#' Calculate total area in each FOV
+#' 
+#' @param dat
+#' @param metaFiles
+#' @param areaDir
+#' @param haloAnnotations
+#' @param annotationsDirs
+#' @param writeCSVfiles
+#' @param maxG
+#' @return table of area values for all FOVs
+#' @export
 calculateAreaTotalFOV <- function(dat, metaFiles, areaDir, haloAnnotations=NULL, annotationsDirs=NULL, writeCSVfiles=TRUE, maxG=5){
 
     if(is.null(haloAnnotations) && is.null(annotationsDirs)){
@@ -871,7 +898,17 @@ calculateAreaTotalFOV <- function(dat, metaFiles, areaDir, haloAnnotations=NULL,
 }
 
 
-
+#' Calculate marker densities for full FOVs
+#'
+#' Calculate marker densities for full FOVs
+#' 
+#' @param dat
+#' @param areas
+#' @param markers
+#' @param writeCSVfiles
+#' @param densityDir
+#' @return table of marker densities per FOV
+#' @export
 calculateMarkerDensityTotalFOV <- function(dat, areas, markers, writeCSVfiles=TRUE, densityDir=NULL){
     rho <- NULL
     for(s in unique(dat$Sample)){
@@ -923,9 +960,30 @@ calculateMarkerDensityTotalFOV <- function(dat, areas, markers, writeCSVfiles=TR
 
 }
 
+#' Print bar charts showing marker densities for total FOVs
+#' 
+#' For each population in each marker set, plot total FOV densities of specified marker combinations.
+#' One plot will be printed for a single population in a single sample, comparing densities of functional markers (?)
+#'
+#' @param den
+#' @param areas
+#' @param markerConfig
+#' @param yScaleConsistency
+#' @param absoluteDensity
+#' @param densityPercentage
+#' @param byFOV
+#' @param summarize
+#' @param stacked
+#' @param sampleOrder
+#' @param separateLegend
+#' @param outDir
+#' @return nothing
+#' @export
 printTotalDensityPlots <- function(den, areas, markerConfig, yScaleConsistency="population", absoluteDensity=TRUE,
                               densityPercentage=TRUE, byFOV=TRUE, summarize=TRUE, stacked=TRUE,
-                              sampleOrder=NULL, separateLegend=TRUE, outDir=getwd()){
+                              sampleOrder=NULL, separateLegend=TRUE, outDir=NULL){
+
+    if(is.null(outDir)){ outDir = getwd() }
 
     allDenVals <- getAllDensityValues(den, areas) 
 
