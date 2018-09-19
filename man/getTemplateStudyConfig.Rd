@@ -4,11 +4,18 @@
 \alias{getTemplateStudyConfig}
 \title{Create a study config template}
 \usage{
-getTemplateStudyConfig(studyDirectory = getwd(),
-  setDefaultDirectoryStruct = TRUE, studyName = NULL, writeYAML = TRUE)
+getTemplateStudyConfig(study_dir = getwd(),
+  set_default_directory_struct = TRUE, set_default_file_names = TRUE,
+  study_name = NULL, writeYAML = TRUE)
 }
 \arguments{
-\item{setDefaultDirectoryStruct}{}
+\item{study_dir}{root study directory, where CURRENT study dir will be created}
+
+\item{set_default_directory_struct}{logical; if TRUE, default study directory and subdirectories will be created}
+
+\item{study_name}{name of study}
+
+\item{writeYAML}{logical; write study config to YAML file}
 }
 \description{
 Create a study config template, returning config in list format and optionally writing

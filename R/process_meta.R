@@ -407,9 +407,12 @@ getTemplatePlotConfig <- function(markerConfig, writeYAML=TRUE, outDir=getwd()){
 #' config to yaml file. User may choose to set all parameters to NULL or to set any available
 #' default values.
 #'
-#' @param studyName
-#' @param setDefaultDirectoryStruct 
-getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectoryStruct=TRUE, studyName=NULL, writeYAML=TRUE){
+#' @param study_dir                    root study directory, where CURRENT study dir will be created
+#' @param study_name                   name of study
+#' @param set_default_directory_struct logical; if TRUE, default study directory and subdirectories will be created
+#' @param writeYAML                    logical; write study config to YAML file 
+getTemplateStudyConfig <- function(study_dir=getwd(), set_default_directory_struct=TRUE, 
+                                   set_default_file_names=TRUE, study_name=NULL, writeYAML=TRUE){
      ## set defaults
     sCfg <- list(raw_data_dir                        = NULL,
                  raw_data_files                      = NULL,
@@ -445,11 +448,11 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
                  fov_area_dir                        = NULL,
                  fov_area_file                       = NULL)
 
-    if(setDefaultDirectoryStruct){
-        if(is.null(studyName)){
-            stop("Need studyName in order to set default directory structure.")
+    if(set_default_directory_struct){
+        if(is.null(study_name)){
+            stop("Need study_name in order to set default directory structure.")
         }
-        sCfg$study_dir                <- file.path(studyDirectory, studyName)
+        sCfg$study_dir                <- file.path(study_dir, study_name)
         sCfg$config_dir               <- file.path(sCfg$study_dir, "config")
         sCfg$debug_dir                <- file.path(sCfg$study_dir, "debug")
         sCfg$data_dir                 <- file.path(sCfg$study_dir, "objectAnalysisData")
@@ -459,9 +462,20 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
         sCfg$fov_stats_dir            <- file.path(sCfg$study_dir, "fov_data")
         sCfg$fov_density_dir          <- file.path(sCfg$fov_stats_dir, "density")
         sCfg$fov_area_dir             <- file.path(sCfg$fov_stats_dir, "area")
-        sCfg$log                      <- file.path(sCfg$study_dir, paste0(studyName,".log"))
-    }
+        sCfg$log                      <- file.path(sCfg$study_dir, paste0(study_name,".log"))
 
+        if(set_default_file_names){
+            sCfg$raw_marker_combo_table_file        <- file.path(sCfg$study_dir, "raw_marker_combo_counts.xlsx")
+            sCfg$plot_config_file                   <- file.path(sCfg$config_dir, "plot_config.yaml")
+            sCfg$cell_type_config_file              <- file.path(sCfg$config_dir, "auto_cell_type_config.yaml")
+            sCfg$marker_analysis_config_file        <- file.path(sCfg$config_dir, "all_marker_sets_config.yaml")
+            sCfg$fov_density_file                   <- file.path(sCfg$fov_density_dir, "all_samples_density.csv")
+            sCfg$fov_area_file                      <- file.path(sCfg$fov_area_dir, "all_sample_area.csv")
+            sCfg$infiltration_density_file          <- file.path(sCfg$infiltration_density_dir, "all_samples_density.csv")
+            sCfg$infiltration_area_file             <- file.path(sCfg$infiltration_area_dir, "all_sample_area.csv")
+            sCfg$infiltration_band_assignments_file <- file.path(sCfg$infiltration_dir, "all_samples_band_assignments.csv")
+        }
+    }
     if(writeYAML){
         write(as.yaml(sCfg, indent=4, indent.mapping.sequence=TRUE), file=file.path(sCfg$config_dir, "study_config.yaml"))
     }
@@ -472,11 +486,11 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
 #'
 #' Set study parameters and write YAML file to be used as study config
 #'
-#' @param studyName                         name of study
-#' @param studyDir                          directory where all study output will be written
-#' @param setDefaultDirectoryStructure      logical indicating whether to set up default directory structure
-#' @param configDir                         directory where all configuration files are/will be
-#' @param studyConfigFile                   configuration file containing all study-wide parameters
+#' @param study_name                         name of study
+#' @param study_dir                         directory where all study output will be written
+#' @param set_default_directory_structure   logical indicating whether to set up default directory structure
+#' @param config_dir                        directory where all configuration files are/will be
+#' @param study_config_file                 configuration file containing all study-wide parameters
 #' @param raw_data_dir                      location of RAW *.rda files (from Nick)
 #' @param raw_data_files                    list of RAW *.rda files (from Nick); may be specified instead of raw_data_dir
 #' @param data_dir                          location of exclusion-marked *.rda files to be used for analysis
@@ -516,39 +530,41 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
 #' @param maximum_distance_from_interface   maximum distance from tumor interface for a cell to be considered near the tumor boundary
 #' @return nothing 
 #' @export
-configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStruct=TRUE, configDir=NULL, 
-                           studyConfigFile=NULL, raw_data_dir=NULL, raw_data_files=NULL, 
+configureStudy <- function(study_name=NULL, study_dir=NULL, set_default_directory_struct=TRUE, 
+                           config_dir=NULL, study_config_file=NULL, raw_data_dir=NULL, raw_data_files=NULL, 
                            data_dir=NULL, data_files=NULL, meta_dir=NULL, meta_files=NULL, 
                            annotations_dirs=NULL, annotations_files=NULL,
-                           drift_dir=NULL, drift_files=NULL, study_dir=NULL, cohort_dir=NULL, 
+                           drift_dir=NULL, drift_files=NULL, cohort_dir=NULL, 
                            infiltration_dir=NULL, fov_stats_dir=NULL, infiltration_density_dir=NULL, 
-                           infiltration_density_file=NULL, infiltration_area_dir=NULL, infiltration_band_assignments_file=NULL,
-                           infiltration_area_file=NULL, fov_density_dir=NULL, fov_density_file=NULL,
-                           fov_area_dir=NULL, fov_area_file=NULL, 
-                           plot_config_file=NULL, marker_analysis_config_file=NULL, cell_type_config_file=NULL, log=NULL, debug=TRUE, raw_marker_combo_table_file=NULL,
-                           pad=20, drift_threshold=0.1, updateExistingConfigFiles=TRUE, write_csv_files=TRUE,
-                           max_g=5, band_width=10, maximumDistanceFromInterface=360){
+                           infiltration_density_file=NULL, infiltration_area_dir=NULL, 
+                           infiltration_band_assignments_file=NULL, infiltration_area_file=NULL, 
+                           fov_density_dir=NULL, fov_density_file=NULL,fov_area_dir=NULL, fov_area_file=NULL, 
+                           plot_config_file=NULL, marker_analysis_config_file=NULL, cell_type_config_file=NULL, 
+                           debug=TRUE, raw_marker_combo_table_file=NULL, pad=20, drift_threshold=0.1, 
+                           updateExistingConfigFiles=TRUE, write_csv_files=TRUE, log=NULL,
+                           max_g=5, band_width=10, max_distance_from_interface=360){
 
-    allConfig <- c("studyName", "studyDir", "configDir", "raw_data_dir", "raw_data_files",
+    allConfig <- c("study_name", "study_dir", "config_dir", "raw_data_dir", "raw_data_files",
                    "data_dir", "data_files", "meta_dir", "meta_files", "drift_dir", "drift_files",
                    "annotations_dirs", "annotations_files", "write_csv_files",
-                   "study_dir", "cohort_dir", "infiltration_dir", "fov_stats_dir", "infiltration_density_dir", 
-                   "infiltration_area_dir", "infiltration_density_file", "infiltration_area_file", "infiltration_band_assignments_file",
+                   "study_dir", "cohort_dir", "infiltration_dir", "fov_stats_dir", 
+                   "infiltration_density_dir", "infiltration_area_dir", "infiltration_density_file", 
+                   "infiltration_area_file", "infiltration_band_assignments_file",
                    "fov_density_dir", "fov_density_file", "fov_area_dir", "fov_area_file", 
                    "log", "debug", "pad", "drift_threshold", "plot_config_file", 
                    "cell_type_config_file", "marker_analysis_config_file", "raw_marker_combo_table_file",
-                   "max_g", "band_width", "maximum_distance_from_interface")
+                   "max_g", "band_width", "max_distance_from_interface")
 
-    if(is.null(studyDir)){ studyDir <- getwd() }
+    if(is.null(study_dir)){ study_dir <- getwd() }
 
     ## create template
     print("Creating template study config")
-    tmpCfg <- getTemplateStudyConfig(studyName=studyName, studyDir=studyDir,
-                                     setDefaultDirectoryStruct=setDefaultDirectoryStruct,
+    tmpCfg <- getTemplateStudyConfig(study_name=study_name, study_dir=study_dir,
+                                     set_default_directory_struct=set_default_directory_struct,
                                      writeYAML=FALSE) 
-    if(!is.null(studyConfigFile)){
+    if(!is.null(study_config_file)){
         print("Reading study config")
-        sCfg <- read_yaml(studyConfigFile)
+        sCfg <- read_yaml(study_config_file)
 
         ## if a default setting exists that is not in the given config at all, 
         ## add it. if it does exist in the given config and it is a directory setting, 
@@ -558,7 +574,7 @@ configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStr
             if(!c %in% names(sCfg)){
                 sCfg[[c]] <- tmpCfg[[c]]
             } else {
-                if(grepl("_dir",c) && is.null(sCfg[[gsub("_dir","_files",c)]]) && setDefaultDirectoryStruct){
+                if(grepl("_dir",c) && is.null(sCfg[[gsub("_dir","_files",c)]]) && set_default_directory_struct){
                     sCfg[[c]] <- tmpCfg[[c]]
                 }
             }

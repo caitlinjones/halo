@@ -4,31 +4,31 @@
 \alias{configureStudy}
 \title{Configure study}
 \usage{
-configureStudy(studyName = NULL, studyDir = NULL,
-  setDefaultDirectoryStruct = TRUE, configDir = NULL,
-  studyConfigFile = NULL, raw_data_dir = NULL, raw_data_files = NULL,
+configureStudy(study_name = NULL, study_dir = NULL,
+  set_default_directory_struct = TRUE, config_dir = NULL,
+  study_config_file = NULL, raw_data_dir = NULL, raw_data_files = NULL,
   data_dir = NULL, data_files = NULL, meta_dir = NULL,
   meta_files = NULL, annotations_dirs = NULL, annotations_files = NULL,
-  drift_dir = NULL, drift_files = NULL, study_dir = NULL,
-  cohort_dir = NULL, infiltration_dir = NULL, fov_stats_dir = NULL,
+  drift_dir = NULL, drift_files = NULL, cohort_dir = NULL,
+  infiltration_dir = NULL, fov_stats_dir = NULL,
   infiltration_density_dir = NULL, infiltration_density_file = NULL,
   infiltration_area_dir = NULL, infiltration_band_assignments_file = NULL,
   infiltration_area_file = NULL, fov_density_dir = NULL,
   fov_density_file = NULL, fov_area_dir = NULL, fov_area_file = NULL,
   plot_config_file = NULL, marker_analysis_config_file = NULL,
-  cell_type_config_file = NULL, log = NULL, debug = TRUE,
+  cell_type_config_file = NULL, debug = TRUE,
   raw_marker_combo_table_file = NULL, pad = 20, drift_threshold = 0.1,
-  updateExistingConfigFiles = TRUE, write_csv_files = TRUE, max_g = 5,
-  band_width = 10, maximumDistanceFromInterface = 360)
+  updateExistingConfigFiles = TRUE, write_csv_files = TRUE, log = NULL,
+  max_g = 5, band_width = 10, max_distance_from_interface = 360)
 }
 \arguments{
-\item{studyName}{name of study}
+\item{study_name}{name of study}
 
-\item{studyDir}{directory where all study output will be written}
+\item{study_dir}{directory where all study output will be written}
 
-\item{configDir}{directory where all configuration files are/will be}
+\item{config_dir}{directory where all configuration files are/will be}
 
-\item{studyConfigFile}{configuration file containing all study-wide parameters}
+\item{study_config_file}{configuration file containing all study-wide parameters}
 
 \item{raw_data_dir}{location of RAW *.rda files (from Nick)}
 
@@ -78,8 +78,6 @@ may be used instead of drift_dir}
 
 \item{cell_type_config_file}{YAML file in same format as marker_analysis_config_file, specifically for cell type markers}
 
-\item{log}{log file}
-
 \item{debug}{logical indicating whether to print extra debug statements}
 
 \item{raw_marker_combo_table_file}{file containing (or to contain) counts of all possible marker combinations}
@@ -92,11 +90,13 @@ may be used instead of drift_dir}
 
 \item{write_csv_files}{logical indicating whether to write intermediate data to CSV files}
 
+\item{log}{log file}
+
 \item{max_g}{????????}
 
 \item{band_width}{for infiltration analyses (area and density), band_width specifies the length of distance intervals from the tumor interface}
 
-\item{setDefaultDirectoryStructure}{logical indicating whether to set up default directory structure}
+\item{set_default_directory_structure}{logical indicating whether to set up default directory structure}
 
 \item{annotations_file}{*.rda file containing PARSED halo boundary annotations}
 

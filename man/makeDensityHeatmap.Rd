@@ -6,7 +6,8 @@
 \usage{
 makeDensityHeatmap(den, annot = NULL, annotColors = NULL,
   msToSummarize = NULL, ctConfig = NULL, areas = NULL,
-  separateLegend = FALSE, bySample = TRUE, byFOV = TRUE)
+  separateLegend = FALSE, bySample = TRUE, byFOV = TRUE,
+  clusterFOVs = TRUE, clusterSamples = TRUE)
 }
 \arguments{
 \item{den}{table containing total FOV cell type densities with basic FOV/Sample annotations}

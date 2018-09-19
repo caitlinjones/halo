@@ -17,7 +17,7 @@ parser$add_argument("-n", "--studyName", type="character", default=NULL,
                     help="name of current study")
 
 parser$add_argument("-m", "--manifestFile", type="character", default=NULL,
-                    help="file containing all project parameters; run ?initializeProject for details")
+                    help="file containing all project parameters")
 
 parser$add_argument("-rf", "--rawDataFiles", type="character", default=NULL,
                     help="comma-separated (no spaces) list of *.rda files WITHOUT exclusions; specify only if running --markExclusions")
@@ -46,7 +46,14 @@ parser$add_argument("-p", "--pad", type="double", default=20,
 parser$add_argument("--driftThreshold", type="double", default=0.1, 
                     help="maximum fraction of drift allowed in order to keep a cell")         
 
-parser$add_argument("--writeCSVFiles", action="store_true", default=TRUE, help="save all intermediate data in csv files")
+parser$add_argument("--maxDistanceFromInterface", type="double", default=360,
+                    help="total distance inside of and outside of tumor interface to include in infiltration analyses") 
+
+parser$add_argument("--bandWidth", type="double", default=10,
+                    help="width of intervals within maxDistanceFromInterface to examine for spatial analyses")
+
+parser$add_argument("--writeCSVFiles", action="store_true", default=TRUE, 
+                    help="save all intermediate data in csv files")
 
 parser$add_argument("-NW", "--noCSVfiles", dest="writeCSVFiles", action="store_false", 
                     help="do NOT write any intermediate results to file; default=FALSE (intermediate CSV files ARE written)")
@@ -130,41 +137,41 @@ args <- parser$parse_args()
 print(args)
 
 library(halodev)
-#source("/home/byrne/halo/dev/halodev/R/marker_combo_table.R")
-#source("/home/byrne/halo/dev/halodev/R/util.R")
-#source("/home/byrne/halo/dev/halodev/R/process_meta.R")
 
-configureStudy(studyName = args$studyName,
-               studyDir  = args$rootDir,
-               setDefaultDirectoryStruct = args$setDefaultDirectoryStruct,
-               configDir = args$configDir,
-               studyConfigFile = args$manifestFile, 
-               raw_data_dir = args$rawDataDir,
-               raw_data_files = args$rawDataFiles,
-               data_dir = args$dataDir,
-               data_files = args$dataFiles,
-               meta_dir = args$metaDir,
-               meta_files = args$metaFiles,
-               drift_dir = args$driftDir,
-               drift_files = args$driftFiles,
-               annotations_dirs = args$annotationsDirs,
-               annotations_files = args$annotationsFiles,
-               infiltration_dir = args$infiltrationDir,
-               infiltration_density_dir = args$infiltrationDensityDir,
-               infiltration_area_dir = args$infiltrationAreaDir,
-               infiltration_density_file = args$infiltrationDensityFile,
-               infiltration_area_file = args$infiltrationAreaFile,
-               fov_stats_dir = args$fovStatsDir,
-               fov_density_dir = args$fovDensityDir,
-               fov_area_dir = args$fovAreaDir,
-               fov_density_file = args$fovDensityFile,
-               fov_area_file = args$fovAreaFile,
+### run configuration
+configureStudy(study_name                   = args$studyName,
+               study_dir                    = args$rootDir,
+               set_default_directory_struct   = args$setDefaultDirectoryStruct,
+               config_dir                   = args$configDir,
+               study_config_file             = args$manifestFile, 
+               raw_data_dir                = args$rawDataDir,
+               raw_data_files              = args$rawDataFiles,
+               data_dir                    = args$dataDir,
+               data_files                  = args$dataFiles,
+               meta_dir                    = args$metaDir,
+               meta_files                  = args$metaFiles,
+               drift_dir                   = args$driftDir,
+               drift_files                 = args$driftFiles,
+               annotations_dirs            = args$annotationsDirs,
+               annotations_files           = args$annotationsFiles,
+               infiltration_dir            = args$infiltrationDir,
+               infiltration_density_dir    = args$infiltrationDensityDir,
+               infiltration_area_dir       = args$infiltrationAreaDir,
+               infiltration_density_file   = args$infiltrationDensityFile,
+               infiltration_area_file      = args$infiltrationAreaFile,
+               fov_stats_dir               = args$fovStatsDir,
+               fov_density_dir             = args$fovDensityDir,
+               fov_area_dir                = args$fovAreaDir,
+               fov_density_file            = args$fovDensityFile,
+               fov_area_file               = args$fovAreaFile,
                marker_analysis_config_file = args$markerConfigFile,
-               cell_type_config_file = args$cellTypeConfigFile,
-               plot_config_file = args$plotConfigFile,
-               log = args$log,
-               drift_threshold = args$driftThreshold,
-               pad = args$pad,
-               debug = args$debug,
-               updateExistingConfigFiles = args$updateExistingConfigFiles, 
-               write_csv_files = args$writeCSVFiles)
+               cell_type_config_file       = args$cellTypeConfigFile,
+               plot_config_file            = args$plotConfigFile,
+               log                         = args$log,
+               drift_threshold             = args$driftThreshold,
+               pad                         = args$pad,
+               band_width                  = args$bandWidth,
+               max_distance_from_interface = args$maxDistanceFromInterface,
+               debug                       = args$debug,
+               updateExistingConfigFiles   = args$updateExistingConfigFiles, 
+               write_csv_files             = args$writeCSVFiles)
