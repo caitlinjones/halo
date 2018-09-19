@@ -403,6 +403,7 @@ getMarkerConfig <- function(configFile, plotConfigFile){
                 clr <- "gray"
                 if(length(functional) > 0){
                     for(f in functional){
+                        clr <- "gray"
                         if(!f %in% ms$populations){
                             m <- paste(p,f,sep=",")
                         } else {
@@ -450,6 +451,5 @@ getMarkerConfig <- function(configFile, plotConfigFile){
     }
 
     return(as.tibble(allMarkers %>% filter(complete.cases(.))))
-
     
 }

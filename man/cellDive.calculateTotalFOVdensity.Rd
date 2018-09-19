@@ -5,7 +5,7 @@
 \title{Calculate density of markers in each full FOV}
 \usage{
 cellDive.calculateTotalFOVdensity(allDat, markerConfig, fovAreas, pp,
-  updatedFOVareas, updatedComboTable, fovDensityPrefix = "")
+  updatedFOVarea, updatedComboTable, fovDensityPrefix = "")
 }
 \arguments{
 \item{allDat}{all Halo data}
@@ -16,11 +16,11 @@ cellDive.calculateTotalFOVdensity(allDat, markerConfig, fovAreas, pp,
 
 \item{pp}{list of all project parameters}
 
-\item{updatedFOVareas}{logical indicating whether FOV areas were updated during current pipeline run}
-
 \item{updatedComboTable}{logical indicating whether combo table was updated during current pipeline run}
 
 \item{fovDensityPrefix}{prefix added to prefix added to 'fov_density_file' and/or 'fov_density_dir' in names of pp list (leave "" if no prefix)}
+
+\item{updatedFOVareas}{logical indicating whether FOV areas were updated during current pipeline run}
 }
 \value{
 list of three items:  

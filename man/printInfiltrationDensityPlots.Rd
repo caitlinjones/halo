@@ -5,10 +5,12 @@
 \title{Print density plots}
 \usage{
 printInfiltrationDensityPlots(den, bandWidth = NULL, config,
-  yScaleConsistency = "population", absoluteDensity = TRUE,
-  densityPercentage = TRUE, byFOV = TRUE, summarize = TRUE,
-  stacked = TRUE, sampleOrder = NULL, separateLegend = TRUE,
-  infiltrationAreas = NULL, bandAssignments = NULL, outDir = getwd())
+  yScaleConsistency = "population", indivPopulations = TRUE,
+  absoluteDensity = TRUE, densityPercentage = TRUE, byFOV = TRUE,
+  summarize = TRUE, stacked = TRUE, forceStack = FALSE,
+  sampleOrder = NULL, separateLegend = TRUE, infiltrationAreas = NULL,
+  outDir = NULL, sampleSummaryRows = NULL, sampleSummaryCols = NULL,
+  sampleSummaryPtsPerPage = NULL)
 }
 \arguments{
 \item{den}{tibble containing densities for all markers to be plotted}
@@ -20,6 +22,8 @@ each interval}
 
 \item{yScaleConsistency}{level on which y-scales should be the same; choices: ["byPopulation"|"all"|"markerSet"]}
 
+\item{indivPopulations}{logical; print a plot for each individual population; default=TRUE}
+
 \item{absoluteDensity}{logical; print plots of absolute density values; default=TRUE}
 
 \item{densityPercentage}{logical; print plots of density percentage values; default=TRUE}
@@ -29,6 +33,19 @@ each interval}
 \item{summarize}{logical; print summary plots, showing density of ALL FOV together; default=TRUE}
 
 \item{stacked}{logical; for plots with all exclusive markers, print stacked bar plots; default=TRUE}
+
+\item{forceStack}{force stacking of cell types even if they appear to be unstackable}
+
+\item{sampleOrder}{vector of samples in order that they should appear on plot}
+
+\item{outDir}{directory where all plots will be printed, organized by marker set}
+
+\item{sampleSummaryRows}{number of rows to include on each page of sample summary file; default=NULL}
+
+\item{sampleSummaryCols}{number of cols to include on each page of sample summary file; default=NULL}
+
+\item{sampleSummaryPtsPerPage}{number of patients to include on each page of sample summary file; can be used instead
+of sampleSummary[Rows|Cols]; default=NULL}
 
 \item{areaDat}{tibble containing area data for all Samples, FOVs and Bands}
 }

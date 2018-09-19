@@ -185,18 +185,20 @@ getAllHaloAnnotations <- function(samp, annotationsDirs, boundaryColors=NULL, bo
     btCodes <- list('InterfaceCoordinates'='tumB', 'ExclusionCoordinates'='excB', 
                     'EpidermisCoordinates'='epiB', 'GlassCoordinates'='glsB')
     allAnnotations <- list()
+    if(is.null(allFiles) || nrow(allFiles) == 0){
+        return(allAnnotations)
+    }
     for(fov in unique(allFiles$FOV)){
         fovBoundaries <- list()
         aFiles <- allFiles %>% filter(FOV == fov) %>% select(File,BoundaryType)
 
         for(x in 1:nrow(aFiles)){
             af <- aFiles$File[x]
-            print(paste0("getting boundaries from file ",af))
+            flog.debug(paste0("getting boundaries from file ",af))
 
             ##### TEMPORARY, FOR COHORT 1
             boundaryType <- aFiles$BoundaryType[x]
             bt <- btCodes[[boundaryType]]
-#print(paste0("boundaryType: ",boundaryType,"  --  bt: ",bt))
             if(!is.null(boundaryColors)){
                 boundaryColors <- list('65280'='Epi','65535'='Exc','255'='Gls')
                 if(boundaryType == "InterfaceCoordinates"){
@@ -421,7 +423,7 @@ plotExclusions <- function(dd,haloAnnotations=NULL,iFiles=NULL,aFiles=NULL,epFil
         }
         jpeg(file.path(outDir,paste0(samp,"_",fov,"_exclusion_debug.jpeg")),width=11,height=11,units="in",res=180)
         par(mfrow=c(3,3))
-        print(paste0("plotting FOV ",fov))
+        flog.debug(paste0("plotting FOV ",fov))
         tmp <- dd %>% filter(SPOT == fov)
 
         for(bt in names(allAnns)){
@@ -498,7 +500,6 @@ plotExclusions <- function(dd,haloAnnotations=NULL,iFiles=NULL,aFiles=NULL,epFil
 #' @param dat             tibble containing Halo object analysis data, to which EXCLUDE column
 #'                        will be added
 #' @param drift           tibble of drift/loss summary 
-#' @param drift           tibble of drift/loss summary 
 #' @param fovAnn          FOV annotations for one sample
 #' @param cellDiveId      CELL_DIVE_ID mapping sample name to fov annotations
 #' @param borderPad       number in pixels indicating the minimum distance between a cell and the FOV
@@ -550,7 +551,7 @@ markExclusions <- function(samp, dat, drift, fovAnn, cellDiveId, haloAnn=NULL, b
         iFiles <- c(iFiles, file.path(pth,dir(pth)[grep(pat,dir(pth))]))
     }
 
-    print("Converting min/max coordinates to midpoint coordinates")
+    flog.debug("Converting min/max coordinates to midpoint coordinates")
     dd <- dat %>% mutate(X=(XMax+XMin)/2,Y=-(YMax+YMin)/2) ## need to keep X|Y min|max for drift loss 
     dd$EXCLUDE <- ""
 
@@ -559,7 +560,7 @@ markExclusions <- function(samp, dat, drift, fovAnn, cellDiveId, haloAnn=NULL, b
     if(length(studyExcl) > 0){
         dd$EXCLUDE <- writeExclusionReasons(dd$EXCLUDE, studyExcl, "LabExclusion")
     } else {
-        print("  No study exclusions found.")
+        flog.info("  No study exclusions found.")
     }
 
     ## get drift/loss exclusions
@@ -568,10 +569,10 @@ markExclusions <- function(samp, dat, drift, fovAnn, cellDiveId, haloAnn=NULL, b
         if(length(driftExcl) > 0){
             dd$EXCLUDE <- writeExclusionReasons(dd$EXCLUDE, driftExcl, paste0("DRIFT_",driftThreshold*100))
         } else {
-            print("  No drift exclusions found.")
+            flog.info("  No drift exclusions found.")
         }
     } else {
-        print("  No drift exclusions marked.")
+        flog.info("  No drift exclusions marked.")
     }
 
     ## mark cells that fall inside Halo exclusion boundaries (exclusions, epidermis, glass) and also
@@ -580,13 +581,13 @@ markExclusions <- function(samp, dat, drift, fovAnn, cellDiveId, haloAnn=NULL, b
         aFile <- epFile <- gFile <- iFile <- NULL
 
         ## exclude points that fall within outside border
-        print(paste0("  getting exclusions for FOV ",fov))
-        print("    excluding points that fall within padding")
+        flog.info(paste0("  getting exclusions for FOV ",fov))
+        flog.info("    excluding points that fall within padding")
         borderExcl <- getBorderPaddingExclusions(fov, samp, dd, borderPad_um)
         if(length(borderExcl) > 0){
             dd$EXCLUDE <- writeExclusionReasons(dd$EXCLUDE, borderExcl, paste0("PADDED_",borderPad))
         } else {
-            print("      No border exclusions found.")
+            flog.info("      No border exclusions found.")
         }
 
         ## if parsed halo annotation is not given, get all halo annotations files for this FOV
@@ -602,38 +603,38 @@ markExclusions <- function(samp, dat, drift, fovAnn, cellDiveId, haloAnn=NULL, b
         }
 
         ## get halo exclusions 
-        print("    excluding points in Halo exclusion annotation files")
+        flog.info("    excluding points in Halo exclusion annotation files")
         haloExcl <- getHaloExclusions(fov, dd, "Exc", haloAnnotations=haloAnn, aFile=aFile, 
                                       boundaryColors=boundaryColors, boundaryReassignmentFile=boundaryReassignmentFile)
         if(length(haloExcl) > 0){
             dd$EXCLUDE <- writeExclusionReasons(dd$EXCLUDE, haloExcl, "HALOExclusion")
         } else {
-            print("      No Halo exclusion boundaries found.")
+            flog.info("      No Halo exclusion boundaries found.")
         }
 
         ## get halo epidermis exclusions 
-        print("    excluding points in Halo epidermis annotation files")
+        flog.info("    excluding points in Halo epidermis annotation files")
         haloEpi <- getHaloExclusions(fov, dd, "Epi", haloAnnotations=haloAnn, aFile=epFile, 
                                      boundaryColors=boundaryColors, boundaryReassignmentFile=boundaryReassignmentFile)
         if(length(haloEpi) > 0){
             dd$EXCLUDE <- writeExclusionReasons(dd$EXCLUDE, haloEpi, "HALOEpidermis")
         } else {
-            print("      No Halo epidermis boundaries found.")
+            flog.info("      No Halo epidermis boundaries found.")
         }
 
         ## get halo glass exclusions 
-        print("    excluding points in Halo glass annotation files")
+        flog.info("    excluding points in Halo glass annotation files")
         haloGls <- getHaloExclusions(fov, dd, "Gls", haloAnnotations=haloAnn, aFile=gFile, 
                                      boundaryColors=boundaryColors, boundaryReassignmentFile=boundaryReassignmentFile)
         if(length(haloGls) > 0){
             dd$EXCLUDE <- writeExclusionReasons(dd$EXCLUDE, haloGls, "HALOGlass")
         } else {
-            print("      No Halo glass boundaries found.")
+            flog.info("      No Halo glass boundaries found.")
         }
  
         ## debug with plots
         if(printPlots){
-            print("Printing plots for debugging")
+            flog.info("Printing plots for debugging")
             plotExclusions(dd[which(dd$SPOT==fov),],haloAnnotations=haloAnn,iFiles,aFiles,epFiles,gFiles,outDir=debugDir,
                            boundaryReassignmentFile=boundaryReassignmentFile)
         }

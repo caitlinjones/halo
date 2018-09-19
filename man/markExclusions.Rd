@@ -26,8 +26,6 @@ will be added}
 border in order for that cell NOT to be excluded}
 
 \item{driftThreshold}{maximum pixel percent determined to have drifted in order to NOT be excluded}
-
-\item{drift}{tibble of drift/loss summary}
 }
 \value{
 tibble matching {dat} exactly, with an extra column, EXCLUDE, added to indicate which

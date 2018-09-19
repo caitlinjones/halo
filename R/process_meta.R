@@ -10,8 +10,10 @@
 #'                   types like ">2" or "<=3" tells how many markers each combination must 
 #'                   contain
 #' @param markers    vector of markers to combine
+#' @param setNegs    logical indicating that for every combination generated, markers that are NOT
+#'                   positive should explicitly be included as negative
 #' @return a list of all possible combinations matching criteria in comboType
-getComplexMarkerCombos <- function(comboType, markers){
+getComplexMarkerCombos <- function(comboType, markers, setNegs=TRUE){
     #if(markers == "TOTAL"){
         ## handle differently
     #}
@@ -38,7 +40,11 @@ getComplexMarkerCombos <- function(comboType, markers){
     for(i in nums){
         cmb <- t(combn(sort(markers),m=i))
         for(c in 1:nrow(cmb)){
-            mSets[[length(mSets)+1]] <- cmb[c,]
+            negs <- c()
+            if(!all(markers %in% cmb[c,])){
+               negs <- paste0(markers[-which(markers %in% cmb[c,])],"-")
+            }
+            mSets[[length(mSets)+1]] <- paste(c(cmb[c,], negs), collapse=",")
         }
     }
     return(mSets)
@@ -98,12 +104,16 @@ getCellTypes <- function(simpleTypes, complexTypes){ #, unreasonableCombinations
             next
         }
         set1 <- getComplexMarkerCombos(ct$IF,ct$OF)
-        set2 <- getComplexMarkerCombos(ct$MATCHES,ct$OF.1)
-        allCombos <- expand.grid(set1,set2)
-        finalCombos <- c()
-        for(i in 1:length(allCombos[[1]])){
-            combo <- unique(sort(unlist(c(allCombos[[1]][i],allCombos[[2]][i]))))
-            finalCombos <- c(finalCombos,paste(combo,collapse=","))
+        if(!(ct$MATCHES == ct$IF && ct$OF.1 == ct$OF)){
+            set2 <- getComplexMarkerCombos(ct$MATCHES,ct$OF.1)
+            allCombos <- expand.grid(set1,set2)
+            finalCombos <- c()
+            for(i in 1:length(allCombos[[1]])){
+                combo <- unique(sort(unlist(c(allCombos[[1]][i],allCombos[[2]][i]))))
+                finalCombos <- c(finalCombos,paste(combo,collapse=","))
+            }
+        } else {
+            finalCombos <- unique(unlist(set1))
         }
         finalCombos <- unique(paste0(finalCombos,",",ct$NEGATIVES))
         overlaps <- finalCombos[which(finalCombos %in% cellTypes$Marker_combination)]
@@ -114,7 +124,8 @@ getCellTypes <- function(simpleTypes, complexTypes){ #, unreasonableCombinations
                           Negatives = rep(ct$NEGATIVES,length(finalCombos)),
                           With_OR_Without = "", 
                           Cell_type = rep(ct$CELL_TYPE,length(finalCombos)),
-                          Subtype = rep(ct$CELL_TYPE,length(finalCombos)))
+                          Subtype = rep(ct$SUBTYPE,length(finalCombos)),
+                          Tag = rep("",length(finalCombos)))
         cellTypes <- rbind(cellTypes,cts)
     }
 
@@ -400,40 +411,39 @@ getTemplatePlotConfig <- function(markerConfig, writeYAML=TRUE, outDir=getwd()){
 #' @param setDefaultDirectoryStruct 
 getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectoryStruct=TRUE, studyName=NULL, writeYAML=TRUE){
      ## set defaults
-    sCfg <- list(raw_data_dir                = NULL,
-                 raw_data_files              = NULL,
-                 data_dir                    = NULL,
-                 data_files                  = NULL,
-                 meta_dir                    = NULL,
-                 meta_files                  = NULL,
-                 drift_dir                   = NULL,
-                 drift_files                 = NULL,
-                 study_dir                   = NULL, 
-                 log                         = NULL,
-                 marker_config_file          = NULL,
-                 plot_config_file            = NULL,
-                 raw_marker_combo_table_file = NULL,
-                 cell_type_config_file        = NULL,
-                 marker_analysis_config_file = NULL,
-                 pad                         = 20,
-                 drift_threshold             = 0.1,
-                 max_g                       = 5,
-                 band_width                  = 10,
-                 by_band                     = TRUE,
-                 max_distance_from_interface = 360,
-                 debug                       = TRUE,
-                 debug_dir                   = NULL,
-                 infiltration_dir            = NULL,
-                 infiltration_density_dir    = NULL,
-                 infiltration_density_file   = NULL,
-                 infiltration_area_dir       = NULL,
-                 infiltration_area_file         = NULL,
-                 infiltration_band_assignments_file = NULL,
-                 fov_stats_dir               = NULL,
-                 fov_density_dir             = NULL,
-                 fov_density_file            = NULL,
-                 fov_area_dir                = NULL,
-                 fov_area_file               = NULL)
+    sCfg <- list(raw_data_dir                        = NULL,
+                 raw_data_files                      = NULL,
+                 data_dir                            = NULL,
+                 data_files                          = NULL,
+                 meta_dir                            = NULL,
+                 meta_files                          = NULL,
+                 drift_dir                           = NULL,
+                 drift_files                         = NULL,
+                 study_dir                           = NULL, 
+                 log                                 = NULL,
+                 plot_config_file                    = NULL,
+                 raw_marker_combo_table_file         = NULL,
+                 cell_type_config_file               = NULL,
+                 marker_analysis_config_file         = NULL,
+                 pad                                 = 20,
+                 drift_threshold                     = 0.1,
+                 max_g                               = 5,
+                 band_width                          = 10,
+                 by_band                             = TRUE,
+                 max_distance_from_interface         = 360,
+                 debug                               = TRUE,
+                 debug_dir                           = NULL,
+                 infiltration_dir                    = NULL,
+                 infiltration_density_dir            = NULL,
+                 infiltration_density_file           = NULL,
+                 infiltration_area_dir               = NULL,
+                 infiltration_area_file              = NULL,
+                 infiltration_band_assignments_file  = NULL,
+                 fov_stats_dir                       = NULL,
+                 fov_density_dir                     = NULL,
+                 fov_density_file                    = NULL,
+                 fov_area_dir                        = NULL,
+                 fov_area_file                       = NULL)
 
     if(setDefaultDirectoryStruct){
         if(is.null(studyName)){
@@ -462,47 +472,48 @@ getTemplateStudyConfig <- function(studyDirectory=getwd(), setDefaultDirectorySt
 #'
 #' Set study parameters and write YAML file to be used as study config
 #'
-#' @param studyName
-#' @param studyDir
-#' @param setDefaultDirectoryStructure
-#' @param configDir
-#' @param studyConfigFile
-#' @param raw_data_dir
-#' @param raw_data_files
-#' @param data_dir
-#' @param data_files
-#' @param meta_dir
-#' @param meta_files
-#' @param annotations_dirs
-#' @param annotations_files
-#' @param drift_dir
-#' @param drift_files
-#' @param study_dir
-#' @param cohort_dir
-#' @param infiltration_dir
-#' @param fov_stats_dir
-#' @param infiltration_density_dir
-#' @param infiltration_area_dir
-#' @param infiltration_density_file
-#' @param infiltration_area_file
-#' @param fov_density_dir
-#' @param fov_density_file
-#' @param fov_area_dir
-#' @param fov_area_file
-#' @param marker_config_file
-#' @param plot_config_file
-#' @param marker_analysis_config_file
-#' @param cell_type_config_file
-#' @param log
-#' @param debug
-#' @param raw_marker_combo_table_file
-#' @param pad
-#' @param drift_threshold
-#' @param updateExistingConfigFiles
-#' @param write_csv_files
-#' @param max_g
-#' @param band_width
-#' @param maximum_distance_from_interface
+#' @param studyName                         name of study
+#' @param studyDir                          directory where all study output will be written
+#' @param setDefaultDirectoryStructure      logical indicating whether to set up default directory structure
+#' @param configDir                         directory where all configuration files are/will be
+#' @param studyConfigFile                   configuration file containing all study-wide parameters
+#' @param raw_data_dir                      location of RAW *.rda files (from Nick)
+#' @param raw_data_files                    list of RAW *.rda files (from Nick); may be specified instead of raw_data_dir
+#' @param data_dir                          location of exclusion-marked *.rda files to be used for analysis
+#' @param data_files                        list of exclusion-marked *.rda files to be used for analysis; may be used
+#'                                          instead of specifying an entire directory
+#' @param meta_dir                          directory containing all meta data excel files
+#' @param meta_files                        list of meta data excel files; may be specified in addition to OR instead of
+#'                                          entire meta_dir
+#' @param annotations_dirs                  root directory of ALL halo boundary annotations; currently set up to use subdir
+#'                                          names to determine types of boundaries
+#' @param annotations_file                  *.rda file containing PARSED halo boundary annotations
+#' @param drift_dir                         directory containing *drift_summary.txt files to be used for marking exclusions
+#' @param drift_files                       list specifying certain *drift_summary.txt files to be used for marking exclusions;
+#'                                          may be used instead of drift_dir
+#' @param infiltration_dir                  root directory for all infiltration analyses (within study dir)
+#' @param fov_stats_dir                     root directory for all total FOV-based analyses (within study dir)
+#' @param infiltration_density_dir          directory for infiltration density analyses
+#' @param infiltration_area_dir             directory for infiltration area data
+#' @param infiltration_density_file         file containing (or to contain) infiltration density data
+#' @param infiltration_area_file            file containing (or to contain) infiltration area data
+#' @param fov_density_dir                   directory for total FOV density analyses
+#' @param fov_density_file                  file containing (or to contain) total FOV density data
+#' @param fov_area_dir                      directory for total FOV area data
+#' @param fov_area_file                     file containing (or to contain) total FOV area data
+#' @param plot_config_file                  YAML file containing plot configuration, specifically matching cell types to colors
+#' @param marker_analysis_config_file       YAML file detailing configuration of sets of markers to be analyzed
+#' @param cell_type_config_file             YAML file in same format as marker_analysis_config_file, specifically for cell type markers
+#' @param log                               log file
+#' @param debug                             logical indicating whether to print extra debug statements
+#' @param raw_marker_combo_table_file       file containing (or to contain) counts of all possible marker combinations
+#' @param pad                               number in pixels to trim from images before analysis
+#' @param drift_threshold                   maximum percentage of drift allowed in order for a cell to be included in analyses
+#' @param updateExistingConfigFiles         if providing existing configuration files, overwrite them with updated information as the pipeline progresses
+#' @param write_csv_files                   logical indicating whether to write intermediate data to CSV files
+#' @param max_g                             ????????
+#' @param band_width                        for infiltration analyses (area and density), band_width specifies the length of distance intervals from the tumor interface
+#' @param maximum_distance_from_interface   maximum distance from tumor interface for a cell to be considered near the tumor boundary
 #' @return nothing 
 #' @export
 configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStruct=TRUE, configDir=NULL, 
@@ -513,7 +524,7 @@ configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStr
                            infiltration_dir=NULL, fov_stats_dir=NULL, infiltration_density_dir=NULL, 
                            infiltration_density_file=NULL, infiltration_area_dir=NULL, infiltration_band_assignments_file=NULL,
                            infiltration_area_file=NULL, fov_density_dir=NULL, fov_density_file=NULL,
-                           fov_area_dir=NULL, fov_area_file=NULL, marker_config_file=NULL,
+                           fov_area_dir=NULL, fov_area_file=NULL, 
                            plot_config_file=NULL, marker_analysis_config_file=NULL, cell_type_config_file=NULL, log=NULL, debug=TRUE, raw_marker_combo_table_file=NULL,
                            pad=20, drift_threshold=0.1, updateExistingConfigFiles=TRUE, write_csv_files=TRUE,
                            max_g=5, band_width=10, maximumDistanceFromInterface=360){
@@ -524,7 +535,7 @@ configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStr
                    "study_dir", "cohort_dir", "infiltration_dir", "fov_stats_dir", "infiltration_density_dir", 
                    "infiltration_area_dir", "infiltration_density_file", "infiltration_area_file", "infiltration_band_assignments_file",
                    "fov_density_dir", "fov_density_file", "fov_area_dir", "fov_area_file", 
-                   "log", "debug", "pad", "drift_threshold", "plot_config_file", "marker_config_file",
+                   "log", "debug", "pad", "drift_threshold", "plot_config_file", 
                    "cell_type_config_file", "marker_analysis_config_file", "raw_marker_combo_table_file",
                    "max_g", "band_width", "maximum_distance_from_interface")
 
@@ -558,25 +569,25 @@ configureStudy <- function(studyName=NULL, studyDir=NULL, setDefaultDirectoryStr
     ## set any other parameters passed to this function
     for(param in allConfig){
         if(exists(param) && !is.null(get(param))){
-print(paste0("setting param ",param," to ",get(param)))
+            flog.info(paste0("setting param ",param," to ",get(param)))
             sCfg[[param]] <- get(param)
         } 
     }
 
     ## create directories
     for(d in names(sCfg)[grep("_dir",names(sCfg))]){
-print(d)
+        flog.debug(d)
         if(!is.null(sCfg[[d]])){
-print(paste0("Creating dir: ",sCfg[[d]]))
+            flog.debug(paste0("Creating dir: ",sCfg[[d]]))
             dir.create(sCfg[[d]], recursive=T, showWarnings=T)
         }
     }
 
     if(("meta_dir" %in% names(sCfg) && !is.null(sCfg$meta_dir) && sCfg$meta_dir != "") | 
        ("meta_files" %in% names(sCfg) && !is.null(sCfg$meta_files) && length(sCfg$meta_files) > 0)){
-       print("flattening meta data")
+       flog.debug("flattening meta data")
        flatMeta <- flattenMetaData(metaDir=sCfg$meta_dir, metaFiles=sCfg$meta_files)
-       print("getting marker config")
+       flog.debug("getting marker config")
        tmpMarkerCfg <- getTemplateCellTypeConfig(allCellTypes=flatMeta$MarkerCombinationAnnotation$CellTypes,
                                                writeYAML=F, outDir=sCfg$config_dir)
        if(!is.null(sCfg$cell_type_config_file) && file.exists(sCfg$cell_type_config_file)){
@@ -588,18 +599,18 @@ print(paste0("Creating dir: ",sCfg[[d]]))
                        mCfg[[p]] <- tmpMarkerCfg[[p]]
                    }
                }
-               print(paste0("WARNING: Overwriting existing cell type config file ",sCfg$cell_type_config_file))
+               flog.warn(paste0("WARNING: Overwriting existing cell type config file ",sCfg$cell_type_config_file))
                write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$cell_type_config_file)
            }
        } else {
            ## write marker config template if one does not exist
-           print("Writing marker config template")
+           flog.debug("Writing marker config template")
            mCfg <- tmpMarkerCfg
            sCfg$cell_type_config_file <- file.path(sCfg$config_dir, "auto_cell_type_config.yaml") 
            write(as.yaml(mCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$cell_type_config_file)
        }
 
-       print("setting up plot config")
+       flog.debug("setting up plot config")
        tmpPlotCfg <- getTemplatePlotConfig(mCfg, writeYAML=F, outDir=sCfg$config_dir)
        if(!is.null(sCfg$plot_config_file) & file.exists(sCfg$plot_config_file)){
            pCfg <- read_yaml(sCfg$plot_config_file)
@@ -610,12 +621,12 @@ print(paste0("Creating dir: ",sCfg[[d]]))
                        pCfg[[p]] <- tmpPlotCfg[[p]]
                    }
                }
-               print(paste0("WARNING: Overwriting existing plot config file ",sCfg$plot_config_file))
+               flog.warn(paste0("WARNING: Overwriting existing plot config file ",sCfg$plot_config_file))
                write(as.yaml(pCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$plot_config_file)
            }
        } else {
            ## write plot config template if one does not exist
-           print("Writing plot config template")
+           flog.debug("Writing plot config template")
            pCfg <- tmpPlotCfg 
            sCfg$plot_config_file <- file.path(sCfg$config_dir, "template_plot_config.yaml") 
            write(as.yaml(pCfg, indent=4, indent.mapping.sequence=TRUE), file=sCfg$plot_config_file)

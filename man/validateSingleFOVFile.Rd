@@ -9,6 +9,9 @@ validateSingleFOVFile(uniqFOVs)
 \arguments{
 \item{uniqFOVs}{vector containing list of unique FOVs in dataset}
 }
+\value{
+nothing
+}
 \description{
 If the list is longer than one element, print error message and EXIT
 }

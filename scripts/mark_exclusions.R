@@ -27,7 +27,8 @@ pp <- NULL
 ## get all params from manifest if it exists, otherwise get them from command line
 print(args$manifest)
 if(!is.null(args$manifest)){
-    pp <- initializeProject(args$manifest,type="counts")
+    #pp <- initializeProject(args$manifest,type="counts")
+    pp <- read_yaml(args$manifest)
     print(pp)
 } else {
     usage()

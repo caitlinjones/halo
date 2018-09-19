@@ -1,5 +1,11 @@
+#' Validate study configuration
+#' 
+#' Validate study configuration and set any available defaults
+#'
+#' @param config   study configuration in list format
+#' @return updated configuration in list format
+#' @export
 validateConfig <- function(config){
-
     ## DEFAULTS
     pad_default <- 20
     drift_default <- 0.1
@@ -7,8 +13,6 @@ validateConfig <- function(config){
     max_g <- 5
     band_width <- 10
     maxDistanceFromInterface <- 360
-
-
     ## make sure all directories and files exist and are readable/writeable
     dir_settings <- names(config)[grep("_dir",names(config))]
     for(dir in dir_settings){
@@ -22,7 +26,6 @@ validateConfig <- function(config){
             assert_that(is.writeable(config[[dir]]))
         }
     }
-
     ## make sure all files exist, and if any file param is NULL, 
     ## make sure the equivalent _dir param is NOT NULL
     file_settings <- names(config)[grep("_file",names(config))]
@@ -37,10 +40,8 @@ validateConfig <- function(config){
             assert_that(is.readable(f))
         }
     }
-
     ## REQUIRED: 
     #study config file
-
     if(is.null(config$meta_dir) && is.null(config$meta_files)){
         stop("Please provide either meta_dir or meta_files in config")
     }
@@ -56,7 +57,7 @@ validateConfig <- function(config){
             warning(paste0("No drift threshold set in study config. Setting to default: ",drift_default))
         }
         if(is.null(config$pad)){
-            config$pad <- 20
+            config$pad <- pad_default
             warning(paste0("No padding set in study config. Setting to default: ",pad_default))
         }
     } else {
@@ -69,11 +70,17 @@ validateConfig <- function(config){
             stop("Please provide at least one annotations_dirs in config")
         }
     }
-
     return(config)
 }
 
-
+#' Validate data exclusions
+#'
+#' Given a data frame with an EXCLUDE column, count number and fraction
+#' of all possible types of exclusions
+#'
+#' @param dat  data frame including EXCLUDE column
+#' @return nothing
+#' @export
 validateExclusions <- function(dat){
     excTypes <- c("LabExclusion","HALOExclusion","HALOGlass","HALOEpidermis","DRIFT","PAD")
 
@@ -88,8 +95,9 @@ validateExclusions <- function(dat){
     for(t in excTypes){
         tmp %>% 
         filter(grepl(t, EXCLUDE)) %>% 
-        summarise(TotalCoun=sum(Count),TotFrac=sum(FracTotal))        
+        summarise(TotalCount=sum(Count),TotFrac=sum(FracTotal))        
     }
+    return(NULL)
 }
 
 #' Make sure list of unique FOVs contains only one element
@@ -97,6 +105,7 @@ validateExclusions <- function(dat){
 #' If the list is longer than one element, print error message and EXIT 
 #'
 #' @param uniqFOVs    vector containing list of unique FOVs in dataset
+#' @return nothing
 #' @export
 validateSingleFOVFile <- function(uniqFOVs){
     ## ensure that file contains only ONE FOV
@@ -104,5 +113,6 @@ validateSingleFOVFile <- function(uniqFOVs){
         flog.fatal("Multiple FOVs found in this file.")
         stop("MULTIPLE FOVs found in file. Please split file by FOV and rerun")
     }
+    return(NULL)
 }
 

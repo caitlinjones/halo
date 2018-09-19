@@ -1,5 +1,228 @@
 ##### interface.R
 
+#' Process and load any existing project data 
+#' 
+#' Process and load any existing project data in order to start analysis
+#' where previous analyses left off
+#' 
+#' @param   pp  list of project parameters and values
+#' @return list of all data loaded, including area, density, project configs and status
+#' @export
+cellDive.initCombinedProject <- function(args){
+
+    allDat <- NULL
+    updated <- list(Boundaries=FALSE,
+                    Exclusions=FALSE, 
+                    ComboTable=FALSE, 
+                    FOVarea=FALSE, 
+                    FOVdensity=FALSE, 
+                    InfiltrationArea=FALSE, 
+                    InfiltrationDensity=FALSE)
+    dat <- list()
+    pp <- NULL
+
+    ### get project parameters
+    if(!is.null(args$manifest)){
+        flog.info("Reading study manifest...")
+        pp <- read_yaml(args$manifest)
+        flog.debug(paste(names(pp), as.vector(pp), sep=": ", collapse="\n"))
+    } else {
+        usage()
+    }
+
+    #pp <- validateConfig(pp) ## TO DO
+
+    ### GET ALL ANNOTATIONS ###
+    dat$ctCfg <- NULL
+    if(!is.null(pp$cell_type_config_file)){
+        flog.info("Reading cell type config file...")
+        dat$ctCfg <- tryCatch({
+                   read_yaml(pp$cell_type_config_file)
+               }, err=function(e){
+                   print(e)
+               })
+    }
+
+    ###
+    ### check for meta data files
+    ###
+    if(!is.null(pp$meta_files)){
+        metaFiles <- pp$meta_files
+        flog.info("Meta files:")
+        flog.info(paste0("  ",metaFiles))
+    } else if(!is.null(pp$meta_dir)){
+        metaFiles <- file.path(pp$meta_dir,dir(pp$meta_dir)[grep("\\.xlsx",dir(pp$meta_dir))])
+        flog.info("Meta files:")
+        flog.info(paste0("  ",metaFiles))
+    } else {
+        stop("No meta data given.")
+    }
+    ###
+    ## remove files that someone currently has open, indicated by "~" in basename
+    ###
+    if(length(grep("~",metaFiles)) > 0){
+        metaFiles <- metaFiles[-grep("~",metaFiles)]
+    }
+
+    ###
+    ### read study annotations
+    ###
+    allStudyAnn <- cellDive.loadStudyAnnotations(metaFiles)
+    sampleOrder <- allStudyAnn %>% arrange(desc(`Lesion Response`), Patient) %>% pull(SampleLabel) %>% unique()
+    dat$allStudyAnn <- allStudyAnn
+    dat$sampleOrder <- sampleOrder
+
+
+    ###
+    ### get halo boundaries
+    ###
+    flog.info("Getting halo boundaries...")
+    lst <- cellDive.getAllBoundaryAnnotations(pp, sampAnn=allStudyAnn)
+    allHaloAnnotations <- lst$dat
+    updated$Boundaries <- lst$updated
+    pp <- lst$pp
+    cellDive.updateManifest(pp, args$manifest)
+    dat$allHaloAnnotations <- allHaloAnnotations
+
+
+    ### 
+    ### get marker/plot configs    
+    ###
+    flog.info("Parsing marker configurations...")
+    flog.info("  (1) config for main density analysis")
+    parsedMrkrCfg <- getMarkerConfig(pp$marker_analysis_config_file, pp$plot_config_file)
+
+    if("cell_type_config_file" %in% names(pp)){
+        flog.info("  (2) config for cell type analysis")
+        parsedCTCfg <- getMarkerConfig(pp$cell_type_config_file, pp$plot_config_file)
+        flog.info("      * combining cell type and main configs")
+        completeMrkrCfg <- bind_rows(parsedMrkrCfg, parsedCTCfg)
+
+        parsedCTCfg$Population <- gsub(",PCK26-","",parsedCTCfg$Population)
+        parsedCTCfg$CellType <- gsub(",PCK26-","",parsedCTCfg$CellType)
+        parsedCTCfg <- parsedCTCfg %>% unique()
+    } else {
+        completeMrkrCfg <- parsedMrkrCfg
+    }
+    completeMrkrCfg <- completeMrkrCfg %>% unique()
+
+    parsedMrkrCfg$Population <- gsub(",PCK26-","",parsedMrkrCfg$Population)
+    parsedMrkrCfg$CellType <- gsub(",PCK26-","",parsedMrkrCfg$CellType)
+    parsedMrkrCfg <- parsedMrkrCfg %>% unique()
+
+    dat$parsedMarkerConfig <- parsedMrkrCfg
+    dat$completeMarkerConfig <- completeMrkrCfg
+
+
+    if(args$fovStats){
+        if(is.null(allDat) && (!"fov_area_file" %in% names(pp) || length(pp$fov_area_file) == 0 ||
+            !file.exists(pp$fov_area_file) || !"fov_density_file" %in% names(pp) || length(pp$fov_density_file) == 0 ||
+            !file.exists(pp$fov_density_file))){
+            flog.info("Reading all halo data...")
+            allDat <- cellDive.loadAllData(pp,"data")
+        }
+
+
+        ###
+        ### total FOV areas
+        ###
+        flog.info("Getting total FOV areas...")
+        lst <- cellDive.calculateTotalFOVarea(allDat, pp, metaFiles, updated$Exclusions, 
+                                              allHaloAnnotations=allHaloAnnotations)
+        fovAreas <- lst$dat %>% unique() %>% filter(Area != "Area") # *specific to combined data to ensure proper
+                                                                    # combining of area files (for this one I did
+                                                                    # that manually; if combining cohorts is going
+                                                                    # to be a thing, eventually write code to do it
+                                                                    # properly
+        fovAreas$SPOT <- as.numeric(fovAreas$SPOT)
+        fovAreas$Area <- as.numeric(fovAreas$Area)
+        fovAreas <- fovAreas %>% left_join(allStudyAnn, by=c("Sample","SPOT"))
+        pp <- lst$pp
+        updated$FOVarea <- lst$updated
+        cellDive.updateManifest(pp, args$manifest)
+
+        ###
+        ### total FOV densities
+        ###
+        flog.info("Getting total FOV densities...")
+        lst <- cellDive.calculateTotalFOVdensity(allDat, completeMrkrCfg, fovAreas, pp, 
+                                                 updated$FOVarea, updated$ComboTable)
+        fovDensity <- lst$dat %>% filter(Sample != "Sample") # *see note above about manual combining of area files; 
+                                                             # same applies here
+        #fovDensity$SPOT <- as.numeric(fovDensity$SPOT)
+        pp <- lst$pp
+        updated$FOVdensity <- lst$updated
+        cellDive.updateManifest(pp, args$manifest)
+
+        ### ** SPECIFIC TO COMBINED MELANOMA DATA ** ###
+        fovDensity <- fovDensity %>% left_join(allStudyAnn, by=c("Sample","SPOT"))
+        fovDensity$Sample <- fovDensity$SampleLabel
+        fovDensity$CellType <- gsub(",PCK26-","",fovDensity$CellType) # *specific to combined melanoma data; if combining
+                                                                      # cohorts with different markers is going to be a 
+                                                                      # thing, write code to do this properly
+        ## this must be done AFTER density 
+        fovAreas$Sample <- fovAreas$SampleLabel
+
+        dat$fovAreas <- fovAreas
+        dat$fovDensity <- fovDensity
+    }
+
+
+    if(args$infiltrationStats){
+        ###
+        ### infiltration 
+        ###
+        if(is.null(allDat) && (!"infiltration_area_file" %in% names(pp) || length(pp$infiltration_area_file) == 0 ||
+            !file.exists(pp$infiltration_area_file))){
+            flog.info("Reading all halo data...")
+            allDat <- cellDive.loadAllData(pp,"data")
+        }
+
+        ###
+        ### infiltration areas 
+        ###
+        flog.info("Getting infiltration areas...")
+        lst <- cellDive.calculateInfiltrationArea(allDat, pp, allHaloAnnotations, updated$Exclusions)
+        infiltrationAreas <- lst$dat$area %>% filter(Sample != "Sample")
+        infiltrationAreas$SPOT <- as.numeric(infiltrationAreas$SPOT)
+        infiltrationAreas$BandArea <- as.numeric(infiltrationAreas$BandArea)
+        infiltrationAreas <- infiltrationAreas %>% left_join(allStudyAnn, by=c("Sample","SPOT"))
+        infiltrationAreas$Sample <- infiltrationAreas$SampleLabel
+        infiltrationAreas <- infiltrationAreas %>% select(Sample, SPOT, Band, BandArea)
+
+        bandAssignments <- lst$dat$bandAssignments %>% left_join(allStudyAnn, by=c("Sample","SPOT"))
+        bandAssignments$Sample <- bandAssignments$SampleLabel
+
+        pp <- lst$pp
+        updated$InfiltrationArea <- lst$updated
+        cellDive.updateManifest(pp, args$manifest)
+
+        ###
+        ### infiltration densities
+        ###
+        flog.info("Getting infiltration densities...")
+        lst <- cellDive.calculateInfiltrationDensity(parsedMrkrCfg, infiltrationAreas, bandAssignments, 
+                                                     allStudyAnn, pp, updated$InfiltrationArea)
+        infiltrationDensity <- lst$dat
+        infiltrationDensity$Sample <- infiltrationDensity$SampleLabel
+        infiltrationDensity$CellType <- gsub(",PCK26-","",infiltrationDensity$CellType)
+
+        pp <- lst$pp
+        updated$InfiltrationDensity <- lst$updated
+        cellDive.updateManifest(pp, args$manifest)
+
+        dat$infiltrationDensity <- infiltrationDensity
+        dat$infiltrationAreas <- infiltrationAreas
+        dat$bandAssignments <- bandAssignments
+    }
+
+    return(list(dat=dat, pp=pp, updated=updated))
+}
+
+
+
+
+
 #' Overwrite manifest file with updated values
 #'
 #' Overwrite manifest file with most current values
@@ -9,7 +232,7 @@
 #' @return nothing
 #' @export
 cellDive.updateManifest <- function(projectParams, manifest){
-    write(as.yaml(pp, indent=4, indent.mapping.sequence=TRUE), file=manifest)
+    write(as.yaml(projectParams, indent=4, indent.mapping.sequence=TRUE), file=manifest)
 }
 
 #' Load data from each rda file into one table
@@ -35,7 +258,7 @@ cellDive.loadAllData <- function(projectParams, whichFileSet){
     files_key <- paste0(whichFileSet,"_files") 
     pp <- projectParams
     allDat <- NULL
-    print("Loading all pre-processed halo data...")
+    flog.info("Loading all pre-processed halo data...")
     if(is.null(pp[[files_key]])){
         if(is.null(pp[[dir_key]])){
             stop("No data files provided. Please modify config file and rerun.")
@@ -46,7 +269,7 @@ cellDive.loadAllData <- function(projectParams, whichFileSet){
     }
 
     for(df in dataFiles){
-        print(paste0("Reading file ",df))
+        flog.info(paste0("Reading file ",df))
         dat <- readRDS(df)
         dat <- dat %>%
                filter(EXCLUDE=="", ValueType=="Positive") %>%
@@ -60,6 +283,44 @@ cellDive.loadAllData <- function(projectParams, whichFileSet){
                    bind_rows(dat)
     }
     return(allDat)
+}
+
+#' Load and parse all Sample+FOV annotations
+#' 
+#' Load and parse all Sample+FOV annotations
+#' 
+#' @param metaFiles  vector of meta data files, including at least
+#'                   *SampleAnnotations.xlsx and *FOVannotations.xlsx
+#' @return tibble of joined Sample+FOV annotations
+#' @export
+cellDive.loadStudyAnnotations <- function(metaFiles){
+
+    flog.info("Reading FOV annotations...")
+    fovAnnFile <- metaFiles[grep("FOVannotations.xlsx",metaFiles)]
+    if(length(fovAnnFile) == 0){
+        stop("No FOV annotation found.")
+    }
+    fovAnnotations <- as.tibble(read.xlsx(fovAnnFile,1,check.names=FALSE))
+
+    flog.info("Reading Sample annotations...")
+    sampleAnnFile <- metaFiles[grep("SampleAnnotations.xlsx",metaFiles)]
+    if(length(sampleAnnFile) == 0){
+        stop("No sample annotation found.")
+    }
+    sampAnn <- as.tibble(read.xlsx(sampleAnnFile,1,check.names=FALSE))
+    sampAnn$rda_sample <- sampAnn$CELL_DIVE_ID
+    sampAnn$rda_sample[which(sampAnn$rda_sample == "melanoma_untreated")] <- "Untreated"
+    sampAnn$rda_sample[which(sampAnn$rda_sample == "melanoma_PR")] <- "PR"
+    sampAnn$rda_sample[which(sampAnn$rda_sample == "melanoma_CR")] <- "CR"
+
+    allStudyAnn <- full_join(sampAnn, fovAnnotations, by=c("CELL_DIVE_ID")) %>%
+                   select(Sample=rda_sample, Patient, Sample_number, FOV_number, FOV_type,
+                          `Lesion Response`, Treatment, `Prior Rx (systemic)`, `Num. IL2 injections`,
+                          `IL2 interval (days)`, `Lesion Response` ) %>%
+                   mutate(SampleLabel=paste(paste0("Pt_",Patient),paste0("s_",Sample_number),sep=".")) %>%
+                   rename(SPOT=FOV_number)
+
+    return(allStudyAnn)
 }
 
 #' Mark cells in *.rda file to be excluded from analysis
@@ -84,18 +345,18 @@ cellDive.markExclusions <- function(projectParams){
     } else {
         stop("No data given.")
     }
-    print("Data files:")
-    print(paste0("  ",dataFiles))
+    flog.debug("Data files:")
+    flog.debug(paste0("  ",dataFiles,"\n"))
 
     ## check for drift/loss summaries
     if(!is.null(pp$drift_files)){
         driftFiles <- pp$drift_files
-        print("Drift files:")
-        print(paste0("  ",driftFiles))
+        flog.debug("Drift files:")
+        flog.debug(paste0("  ",driftFiles))
     } else if(!is.null(pp$drift_dir)){
         driftFiles <- file.path(pp$drift_dir,dir(pp$drift_dir)[grep(".*summary.*txt",dir(pp$drift_dir))])
-        print("Drift files:")
-        print(paste0("  ",driftFiles))
+        flog.debug("Drift files:")
+        flog.debug(paste0("  ",driftFiles))
     } else {
         driftFiles <- NULL
         warning("No drift summaries given.")
@@ -115,7 +376,7 @@ cellDive.markExclusions <- function(projectParams){
     for(x in seq(dataFiles)){
         df <- dataFiles[x]
 
-        print(paste0("Reading file ",df))
+        flog.info(paste0("Reading file ",df))
         dat <- readRDS(df)
         #dat$Sample <- gsub("_.*","",dat$Sample) #### FIGURE OUT A BETTER WAY
 
@@ -131,14 +392,14 @@ cellDive.markExclusions <- function(projectParams){
             if(length(dlFile) == 0){
                 warning("No drift file found. Skipping drift exclusions")
             } else {
-                print(paste0("Reading drift file",dlFile))
+                flog.info(paste0("Reading drift file",dlFile))
                 drift <- as.tibble(read.delim(dlFile, header=T, sep="\t"))
             }
         }
 
         sampHaloAnnotations <- allHaloAnnotations[[samp]]
 
-        print(paste0("Marking exclusions for ",samp))
+        flog.info(paste0("Marking exclusions for ",samp))
         dat <- markExclusions(samp, dat, drift, fovAnnnotations, cellDiveId, haloAnn=sampHaloAnnotations,
                               printPlots=TRUE, debugDir=pp$debug_dir, boundaryColors=pp$boundary_colors,
                               boundaryReassignmentFile=pp$boundaryReassignmentFile)
@@ -158,18 +419,19 @@ cellDive.markExclusions <- function(projectParams){
 #' 
 #' If boundary annotations have already been parsed and saved to *.rda file, load file. Otherwise, parse all annotations, save to *.rda file and return parsed annotations.
 #'
-#' @param pp   list of all project parameters, from which it will be determined whether annotations have been previously parsed. List must include annotations_dirs and/or annotations_file parameters.
+#' @param pp        list of all project parameters, from which it will be determined whether annotations have been previously parsed. List must include annotations_dirs and/or annotations_file parameters.
+#' @param sampAnn   parsed sample annotations; only required if pp$annotations_file is NULL or the file does not exist/is empty
 #' @return list containing three values: 
 #'           (1) dat = list of all Halo boundary annotations organized by sample and FOV
 #'           (2) updated = logical indicating whether annotations were just parsed (TRUE) or previously parsed (FALSE)
 #'           (3) pp = updated list of project parameters
 #' @export
-cellDive.getAllBoundaryAnnotations <- function(pp){
+cellDive.getAllBoundaryAnnotations <- function(pp,sampAnn=NULL){
     allHaloAnnotations <- NULL
     updated <- FALSE
     if("annotations_file" %in% names(pp) && (!is.null(pp$annotations_file) || !file.exists(pp$annotations_file) || length(pp$annotations_file == 0))){
         if(grepl(".rda$",pp$annotations_file)){
-            print(paste0("Loading halo boundary annotations from RDA file: ",pp$annotations_file))
+            flog.info(paste0("Loading halo boundary annotations from RDA file: ",pp$annotations_file))
             allHaloAnnotations <- readRDS(pp$annotations_file)
         } else {
             stop(paste0("Annotations file has unrecognized format: ",pp$annotations_file))
@@ -178,7 +440,7 @@ cellDive.getAllBoundaryAnnotations <- function(pp){
         if(basename(pp$annotations_dirs) == "HaloCoordinates"){
             pp$annotations_dirs <- file.path(pp$annotations_dirs, dir(pp$annotations_dirs))
         }
-        print("Getting all HALO boundary annotations")
+        flog.info("Getting all HALO boundary annotations")
         for(s in sampAnn$CELL_DIVE_ID){
             sampHaloAnn <- getAllHaloAnnotations(s, pp$annotations_dirs, boundaryColors=pp$boundary_colors)
             allHaloAnnotations[[s]] <- sampHaloAnn
@@ -191,7 +453,7 @@ cellDive.getAllBoundaryAnnotations <- function(pp){
         }
         updated=TRUE
     } else {
-        print("No boundary annotations found. Can not run exclusions OR infiltration analysis.")
+        flog.info("No boundary annotations found. Can not run exclusions OR infiltration analysis.")
     }
 
     return(list(dat=allHaloAnnotations, updated=updated, pp=pp))
@@ -216,7 +478,7 @@ cellDive.writeMarkerComboTables <- function(pp, allDat, whichTableFile, markerCo
     updated <- FALSE
     mCfg <- markerConfig
     if(!is.null(pp[[whichTableFile]]) && file.exists(pp[[whichTableFile]]) && !updatedExclusions){
-        print(paste0("Marker combo table: ",pp[[whichTableFile]]," already exists. No update needed"))
+        flog.info(paste0("Marker combo table: ",pp[[whichTableFile]]," already exists. No update needed"))
     } else {
 
         indivMarkers <- unique(mCfg$all_cell_type_markers)
@@ -314,7 +576,7 @@ cellDive.calculateTotalFOVarea <- function(allDat, pp, metaFiles, updatedExclusi
 #'           (2) updated = logical indicating whether a new density table was generated (TRUE) or an old one was loaded (FALSE) 
 #'           (3) pp = updated list of project parameters
 #' @export
-cellDive.calculateTotalFOVdensity <- function(allDat, markerConfig, fovAreas, pp, updatedFOVareas, updatedComboTable, fovDensityPrefix=""){
+cellDive.calculateTotalFOVdensity <- function(allDat, markerConfig, fovAreas, pp, updatedFOVarea, updatedComboTable, fovDensityPrefix=""){
     mCfg <- markerConfig
     fovDensity <- NULL
     updated <- FALSE
@@ -339,7 +601,7 @@ cellDive.calculateTotalFOVdensity <- function(allDat, markerConfig, fovAreas, pp
         fovDensity <- calculateMarkerDensityTotalFOV(allDat, fovAreas, markerCombos,
                                                      writeCSVfiles=pp$write_csv_files, densityDir=pp$fov_density_dir)    
         if(pp$write_csv_files){
-            fileName <- "All_samples_density.csv"
+            fileName <- "all_samples_density.csv"
             if(!fovDensityPrefix==""){
                 fileName <- paste0(fovDensityPrefix,"_",fileName)
             }
@@ -375,10 +637,10 @@ cellDive.calculateInfiltrationArea <- function(allDat, pp, haloAnnotations, upda
 
         interfaceBins <- (-(pp$max_distance_from_interface/pp$band_width):(pp$max_distance_from_interface/pp$band_width))*pp$band_width
 
-        samp_ia <- calculateInterfaceArea(allDat, haloAnnotations=allHaloAnnotations, writeCSVfiles=pp$write_csv_files,
+        samp_ia <- calculateInterfaceArea(allDat, haloAnnotations=haloAnnotations, writeCSVfiles=pp$write_csv_files,
                                           maxG=pp$max_g, outDir=pp$infiltration_area_dir, interfaceBins=interfaceBins)
 
-        ia <- samp_ia$area
+        ia <- samp_ia$area %>% gather(3:ncol(samp_ia$area), key="Band", value="BandArea")
         ba <- samp_ia$bandAssignments
 
         pp$infiltration_area_file <- file.path(pp$infiltration_area_dir, "all_samples_interface_area.csv")
@@ -386,7 +648,10 @@ cellDive.calculateInfiltrationArea <- function(allDat, pp, haloAnnotations, upda
         updated <- TRUE
     } else {
         ba <- as.tibble(read.delim(pp$infiltration_band_assignments_file,header=T,sep=",",check.names=FALSE))
-        ia <- as.tibble(read.delim(pp$infiltration_area_file,header=T,sep=",",check.names=FALSE))
+        ia <- as.tibble(read.delim(pp$infiltration_area_file,header=T,sep=",",check.names=FALSE)) 
+        if(!"BandArea" %in% names(ia)){
+            ia <- ia %>% gather(3:ncol(ia), key="Band", value="BandArea")
+        }
     }
 
     return(list(dat=list(area=ia, bandAssignments=ba), pp=pp, updated=updated))
@@ -426,6 +691,7 @@ cellDive.fillInMarkerComboInterpretations <- function(xlfile=NULL, markerComboTa
 #' @param infiltrationAreas        area table containing Sample,SPOT,Band,Area
 #' @param bandAssignments          table containing Band column where each value is an assignment for a single cell to a specific distance band around a tumor interface
 #' @param pp                       list of all project parameters
+#' @param sampAnn                  table of all sample annotations
 #' @param updatedInfiltrationAreas logical indicating whether infiltration areas were updated during the current pipeline run
 #' @param infiltrationDensityPrefix  prefix added to infiltration_density_file/dir in list of project params; leave equal to "" to indicate no prefix added
 #' @return list of three items:
@@ -434,7 +700,7 @@ cellDive.fillInMarkerComboInterpretations <- function(xlfile=NULL, markerComboTa
 #'           (3) pp = updated list of project parameters
 #' @export 
 cellDive.calculateInfiltrationDensity <- function(markerConfig, infiltrationAreas, bandAssignments, 
-                                                  pp, updatedInfiltrationAreas, 
+                                                  sampAnn, pp, updatedInfiltrationAreas, 
                                                   infiltrationDensityPrefix=""){
     mCfg <- markerConfig
     infiltrationDensity <- NULL
@@ -457,27 +723,30 @@ cellDive.calculateInfiltrationDensity <- function(markerConfig, infiltrationArea
     }
 
     if(is.null(pp[[file_key]]) || length(pp[[file_key]])==0 || !file.exists(pp[[file_key]]) || updatedInfiltrationAreas){
-        for(s in unique(bandAssignments$Sample)){
-print(s)
-            ia <- infiltrationAreas %>% filter(Sample == s)
-            ba <- bandAssignments %>% filter(Sample == s)
-            den <- calculateInfiltrationDensity(ia, ba, markerCombos, writeCSVfiles=pp$write_csv_files, 
-                                                outDir=pp$infiltration_density_dir, statsByBand=TRUE)
-            infiltrationDensity <- bind_rows(infiltrationDensity, den)
+        fileName <- file.path(pp$infiltration_density_dir,"all_samples_density.csv")
+        if(!infiltrationDensityPrefix==""){
+            fileName <- file.path(pp$infiltration_density_dir,paste0(infiltrationDensityPrefix,"_",fileName))
         }
+
+        flog.info("Calculating infiltration density for all samples")
+
+        infiltrationDensity <- calculateInfiltrationDensity(infiltrationAreas, bandAssignments, 
+                                                            markerCombos, fileName, writeCSVfiles=FALSE) 
+
         if(pp$write_csv_files){
-            fileName <- "all_samples_density.csv"
-            if(!infiltrationDensityPrefix==""){
-                fileName <- paste0(infiltrationDensityPrefix,"_",fileName)
-            }
-            pp[[file_key]] <- file.path(pp$infiltration_density_dir, fileName)
-            write_csv(as.data.frame(infiltrationDensity), file.path(pp$infiltration_density_dir, fileName)) 
+            pp[[file_key]] <- fileName 
+            write_csv(as.data.frame(infiltrationDensity), fileName) 
         }
         updated <- TRUE
     } else {
-        infiltrationDensity <- as.tibble(read.delim(pp[[file_key]], header=T, sep=","))
+        infiltrationDensity <- as.tibble(read.delim(pp[[file_key]], header=T, sep=",")) %>%
+                               filter(Sample != "Sample")
     }
 
+    if(!is.null(sampAnn)){
+        infiltrationDensity <- infiltrationDensity %>% 
+                               left_join(sampAnn, by=c("Sample","SPOT"))
+    }
     return(list(dat=infiltrationDensity, pp=pp, updated=updated))
 }
 

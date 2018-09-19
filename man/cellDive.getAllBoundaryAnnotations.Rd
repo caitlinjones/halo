@@ -4,10 +4,12 @@
 \alias{cellDive.getAllBoundaryAnnotations}
 \title{Load and/or parse all Halo boundary annotations}
 \usage{
-cellDive.getAllBoundaryAnnotations(pp)
+cellDive.getAllBoundaryAnnotations(pp, sampAnn = NULL)
 }
 \arguments{
 \item{pp}{list of all project parameters, from which it will be determined whether annotations have been previously parsed. List must include annotations_dirs and/or annotations_file parameters.}
+
+\item{sampAnn}{parsed sample annotations; only required if pp$annotations_file is NULL or the file does not exist/is empty}
 }
 \value{
 list containing three values: 

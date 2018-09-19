@@ -5,7 +5,7 @@
 \title{Calculate infiltration density}
 \usage{
 cellDive.calculateInfiltrationDensity(markerConfig, infiltrationAreas,
-  bandAssignments, pp, updatedInfiltrationAreas,
+  bandAssignments, sampAnn, pp, updatedInfiltrationAreas,
   infiltrationDensityPrefix = "")
 }
 \arguments{
@@ -14,6 +14,8 @@ cellDive.calculateInfiltrationDensity(markerConfig, infiltrationAreas,
 \item{infiltrationAreas}{area table containing Sample,SPOT,Band,Area}
 
 \item{bandAssignments}{table containing Band column where each value is an assignment for a single cell to a specific distance band around a tumor interface}
+
+\item{sampAnn}{table of all sample annotations}
 
 \item{pp}{list of all project parameters}
 

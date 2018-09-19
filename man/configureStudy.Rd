@@ -15,12 +15,92 @@ configureStudy(studyName = NULL, studyDir = NULL,
   infiltration_area_dir = NULL, infiltration_band_assignments_file = NULL,
   infiltration_area_file = NULL, fov_density_dir = NULL,
   fov_density_file = NULL, fov_area_dir = NULL, fov_area_file = NULL,
-  marker_config_file = NULL, plot_config_file = NULL,
-  marker_analysis_config_file = NULL, cell_type_config_file = NULL,
-  log = NULL, debug = TRUE, raw_marker_combo_table_file = NULL,
-  pad = 20, drift_threshold = 0.1, updateExistingConfigFiles = TRUE,
-  write_csv_files = TRUE, max_g = 5, band_width = 10,
-  maximumDistanceFromInterface = 360)
+  plot_config_file = NULL, marker_analysis_config_file = NULL,
+  cell_type_config_file = NULL, log = NULL, debug = TRUE,
+  raw_marker_combo_table_file = NULL, pad = 20, drift_threshold = 0.1,
+  updateExistingConfigFiles = TRUE, write_csv_files = TRUE, max_g = 5,
+  band_width = 10, maximumDistanceFromInterface = 360)
+}
+\arguments{
+\item{studyName}{name of study}
+
+\item{studyDir}{directory where all study output will be written}
+
+\item{configDir}{directory where all configuration files are/will be}
+
+\item{studyConfigFile}{configuration file containing all study-wide parameters}
+
+\item{raw_data_dir}{location of RAW *.rda files (from Nick)}
+
+\item{raw_data_files}{list of RAW *.rda files (from Nick); may be specified instead of raw_data_dir}
+
+\item{data_dir}{location of exclusion-marked *.rda files to be used for analysis}
+
+\item{data_files}{list of exclusion-marked *.rda files to be used for analysis; may be used
+instead of specifying an entire directory}
+
+\item{meta_dir}{directory containing all meta data excel files}
+
+\item{meta_files}{list of meta data excel files; may be specified in addition to OR instead of
+entire meta_dir}
+
+\item{annotations_dirs}{root directory of ALL halo boundary annotations; currently set up to use subdir
+names to determine types of boundaries}
+
+\item{drift_dir}{directory containing *drift_summary.txt files to be used for marking exclusions}
+
+\item{drift_files}{list specifying certain *drift_summary.txt files to be used for marking exclusions;
+may be used instead of drift_dir}
+
+\item{infiltration_dir}{root directory for all infiltration analyses (within study dir)}
+
+\item{fov_stats_dir}{root directory for all total FOV-based analyses (within study dir)}
+
+\item{infiltration_density_dir}{directory for infiltration density analyses}
+
+\item{infiltration_density_file}{file containing (or to contain) infiltration density data}
+
+\item{infiltration_area_dir}{directory for infiltration area data}
+
+\item{infiltration_area_file}{file containing (or to contain) infiltration area data}
+
+\item{fov_density_dir}{directory for total FOV density analyses}
+
+\item{fov_density_file}{file containing (or to contain) total FOV density data}
+
+\item{fov_area_dir}{directory for total FOV area data}
+
+\item{fov_area_file}{file containing (or to contain) total FOV area data}
+
+\item{plot_config_file}{YAML file containing plot configuration, specifically matching cell types to colors}
+
+\item{marker_analysis_config_file}{YAML file detailing configuration of sets of markers to be analyzed}
+
+\item{cell_type_config_file}{YAML file in same format as marker_analysis_config_file, specifically for cell type markers}
+
+\item{log}{log file}
+
+\item{debug}{logical indicating whether to print extra debug statements}
+
+\item{raw_marker_combo_table_file}{file containing (or to contain) counts of all possible marker combinations}
+
+\item{pad}{number in pixels to trim from images before analysis}
+
+\item{drift_threshold}{maximum percentage of drift allowed in order for a cell to be included in analyses}
+
+\item{updateExistingConfigFiles}{if providing existing configuration files, overwrite them with updated information as the pipeline progresses}
+
+\item{write_csv_files}{logical indicating whether to write intermediate data to CSV files}
+
+\item{max_g}{????????}
+
+\item{band_width}{for infiltration analyses (area and density), band_width specifies the length of distance intervals from the tumor interface}
+
+\item{setDefaultDirectoryStructure}{logical indicating whether to set up default directory structure}
+
+\item{annotations_file}{*.rda file containing PARSED halo boundary annotations}
+
+\item{maximum_distance_from_interface}{maximum distance from tumor interface for a cell to be considered near the tumor boundary}
 }
 \value{
 nothing

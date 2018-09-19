@@ -5,7 +5,7 @@
 \title{Build a list of all marker combinations described in "complex" combination
 format in cell types spreadsheet (described in docs)}
 \usage{
-getComplexMarkerCombos(comboType, markers)
+getComplexMarkerCombos(comboType, markers, setNegs = TRUE)
 }
 \arguments{
 \item{comboType}{tells what kind of combinations to build ("ALL" indicates
@@ -15,6 +15,9 @@ types like ">2" or "<=3" tells how many markers each combination must
 contain}
 
 \item{markers}{vector of markers to combine}
+
+\item{setNegs}{logical indicating that for every combination generated, markers that are NOT
+positive should explicitly be included as negative}
 }
 \value{
 a list of all possible combinations matching criteria in comboType
